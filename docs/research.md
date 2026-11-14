@@ -2,13 +2,14 @@
 
 ## 背景
 
-- 用户自 2018 年前购买 Appdialer Pro（$4.99），使用 7.5.1 至今
-- 原作者（@pilgr / @AppDialer）的产品线历史：
-  - ~2019：Pro 版停止更新
-  - 2022-06-24：发布付费新版本 AppDialer X（`name.pilgr.appdialer.x`），理由是"大家希望更新 SDK，但不想免费做"（[原推](https://x.com/AppDialer/status/1540410439066333185)）
-  - 2022-08-31 之后购买的 Pro 用户可免费，老付费用户不符合条件
-  - 后续 AppDialer 11 / 12 均为付费版
-- 核心痛点：target SDK 陈旧 + 按 Android 大版本重复收费
+原应用（Appdialer Pro，作者 @pilgr / @AppDialer）的收费时间线：
+
+- ~2018：Pro 版转为免费（仅限特定日期之后购买的用户享受退款）
+- ~2019：停止更新，最终版本 7.5.1，target SDK 从此陈旧
+- 2022-06-24：发布付费新版本 AppDialer X（`name.pilgr.appdialer.x`），理由是"很多人希望更新 SDK，但不想免费做"（[原推](https://x.com/AppDialer/status/1540410439066333185)）
+- 之后 AppDialer 11 / 12 相继发布，均为付费版，每次 Android 大版本升级需重新付费
+
+复刻并开源的动机：**原版太旧，新版太贵**。旧版 target SDK 陈旧、在新版 Android 上问题渐多；新版按 Android 大版本重复收费。因此复刻其核心功能并长期跟进 SDK 更新。
 
 ## 需求画像
 
