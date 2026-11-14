@@ -101,7 +101,7 @@ class MainActivity : ComponentActivity() {
                         onSelectTheme = { mode ->
                             appScope.launch { settings.setTheme(mode) }
                         },
-                        onOpenShortcutPermission = { openAppDetails(packageName) },
+                        onOpenShortcutPermission = { openPermissionEditor() },
                     )
                 } else {
                     SearchScreen(
@@ -189,6 +189,24 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /** 打开权限管理（spec v2.8/v2.9）：MIUI 直达官方权限编辑页（dev.mi.com APP_PERM_EDITOR），失败回退应用详情页 */
+    private fun openPermissionEditor() {
+        val miuiIntent = Intent("miui.intent.action.APP_PERM_EDITOR").apply {
+            setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity")
+            putExtra("extra_pkgname", packageName)
+            putExtra("extra_type", 1) // “其他权限”分类（桌面快捷方式所在）
+        }
+        if (runCatching { startActivity(miuiIntent) }.isSuccess) return
+
+        val legacyIntent = Intent("miui.intent.action.APP_PERM_EDITOR").apply {
+            setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.AppPermissionsEditorActivity")
+            putExtra("extra_pkgname", packageName)
+        }
+        if (runCatching { startActivity(legacyIntent) }.isSuccess) return
+
+        openAppDetails(packageName) // 非 MIUI / 组件缺失兜底
     }
 
     private fun openAppDetails(pkg: String) {
