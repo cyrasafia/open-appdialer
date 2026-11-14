@@ -1,4 +1,4 @@
-# Open AppDialer 技术规格（Spec v2.5）
+# Open AppDialer 技术规格（Spec v2.6）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -145,6 +145,7 @@
 - 禁用 starting window 预览，且 `windowIsTranslucent` 跳过 Android 12+ 系统 SplashScreen（消除启动黑底的根因），v31 覆盖将 splash 背景亦置透明（v2.1/v2.2）
 - `excludeFromRecents`：关闭后不出现在后台窗口列表（v2.1）
 - 启动/关闭动画置空（`windowAnimationStyle` 覆盖 taskOpen 等，spec v2.5）：消除 MIUI 启动缩放动画导致的桌面变暗约 1s（小米官方文档建议方案）
+- **遗留已接受**（v2.6）：从桌面图标启动仍有约一帧轻微闪烁——MIUI 桌面自绘的图标点击动效，早于应用窗口创建，主题层无法禁用（已试尽 preview/splash/translucent/动画置空/壁纸垫底，壁纸垫底在 MIUI 反而垫出应用图标白底）；彻底解法是通知/快捷开关唤起 overlay（backlog，用户暂不接受）
 
 ## 5. 非功能需求
 
@@ -250,6 +251,7 @@ data class AppEntry(
 
 ## 10. 变更记录
 
+- 2026-11-14 v2.6 尝试并回滚 windowShowWallpaper（MIUI 上垫出应用图标白底）；结论：启动一帧闪烁为 MIUI 桌面自绘动效，接受遗留；overlay 唤起方案留 backlog
 - 2026-11-14 v2.5 真机反馈四轮：点击候选后冻结列表（防使用数据重排导致点击项跳位）；候选屏蔽自身；图标放大至 60dp（与系统启动器相当）并收紧间距给名称让宽；windowAnimationStyle 清空启动动画（MIUI taskOpen 缩放导致桌面变暗约 1s，小米官方文档建议的禁用方式）
 - 2026-11-14 v2.4 真机反馈三轮：清空后候选区空白（不恢复默认列表）；候选名称紧凑字体；浮层宽度上限 420→480dp；候选项与按键去背景色并增加涟漪 + 按压缩放动画；左上键改为上下布局（清空上/设置下）
 - 2026-11-14 v2.3 完全移除背景遮罩（backgroundDimEnabled=false）：MIUI 应用打开动画的边缘缩放与遮罩叠加穿帮，且遮罩即黑底来源

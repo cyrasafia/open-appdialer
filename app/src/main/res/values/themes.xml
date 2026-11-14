@@ -15,8 +15,6 @@
         <!-- 无遮罩（spec v2.3）：MIUI 应用打开动画的边缘缩放会与遮罩叠加穿帮，且遮罩曾是黑底来源 -->
         <item name="android:backgroundDimEnabled">false</item>
         <item name="android:windowDisablePreview">true</item>
-        <!-- 壁纸垫底（spec v2.6 尝试）：避免 MIUI 启动动画合成期窗口后面是空 → 黑底 -->
-        <item name="android:windowShowWallpaper">true</item>
         <!-- 清空启动/关闭动画（spec v2.5）：MIUI 的 taskOpen 缩放动画会让桌面变暗约 1s，
              小米官方文档建议的禁用方式即覆盖 windowAnimationStyle -->
         <item name="android:windowAnimationStyle">@style/NullWindowAnimations</item>
