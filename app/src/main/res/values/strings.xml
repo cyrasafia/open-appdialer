@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Open AppDialer</string>
+    <string name="search_hint">Type pinyin or app name</string>
+    <string name="no_results">No matching apps</string>
+    <string name="clear">Clear</string>
+    <string name="key_clear">Clear all / long-press for settings</string>
+    <string name="more_matches_fmt">%1$d more matches — keep typing to narrow down</string>
+    <string name="match_count_fmt">%1$d match(es)</string>
+    <string name="settings_title">Settings</string>
+    <string name="theme_label">Theme</string>
+    <string name="theme_system">Follow system</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="about_label">About</string>
+    <string name="version_fmt">Version %1$s</string>
+    <string name="license_label">License: GPL-3.0</string>
+    <string name="repo_url">github.com/cyrasafia/open-appdialer</string>
+    <string name="launch_failed">Couldn\'t launch app</string>
 </resources>

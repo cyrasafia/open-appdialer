@@ -2,38 +2,41 @@ package com.cyrasafia.openappdialer
 
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.collectAsState
+import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.core.content.ContextCompat
-import com.cyrasafia.openappdialer.data.AppOrdering.orderForEmptyState
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.cyrasafia.openappdialer.data.AppEntry
+import com.cyrasafia.openappdialer.data.AppIconCache
 import com.cyrasafia.openappdialer.data.AppRepository
 import com.cyrasafia.openappdialer.data.AppsCache
 import com.cyrasafia.openappdialer.data.PackageEventReceiver
+import com.cyrasafia.openappdialer.data.SettingsStore
+import com.cyrasafia.openappdialer.ui.search.SearchScreen
+import com.cyrasafia.openappdialer.ui.search.SearchViewModel
+import com.cyrasafia.openappdialer.ui.settings.SettingsScreen
 import com.cyrasafia.openappdialer.ui.theme.OpenAppDialerTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.io.File
 
 /**
- * 浮窗形态主界面（spec F8）。
- * M1 阶段：临时列表用于验证数据层（缓存加载/包事件/空态排序），M3 替换为键盘 + 分页结果。
+ * 浮窗形态主界面（spec F8）：dialog 主题 Activity，
+ * 点外部/返回键直接关闭（不清空输入）。
  */
 class MainActivity : ComponentActivity() {
 
@@ -47,44 +50,79 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val iconCache by lazy { AppIconCache(packageManager) }
+
+    private val settings by lazy { SettingsStore(this) }
+
+    private val searchViewModel: SearchViewModel by viewModels {
+        viewModelFactory { initializer { SearchViewModel(repository) } }
+    }
+
     private val packageReceiver = PackageEventReceiver { action, pkg ->
         repository.onPackageEvent(action, pkg)
     }
 
+    private var showSettings by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         repository.ensureLoaded()
+
         setContent {
-            OpenAppDialerTheme {
-                Surface(
-                    modifier = Modifier
-                        .widthIn(max = 420.dp)
-                        .heightIn(max = 560.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                ) {
-                    val apps by repository.apps.collectAsState()
-                    Column(Modifier.fillMaxSize().padding(16.dp)) {
-                        Text(
-                            text = "M1 · ${apps.size} apps",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        LazyColumn {
-                            items(
-                                apps.orderForEmptyState(System.currentTimeMillis()),
-                                key = { it.packageName },
-                            ) { app ->
-                                Text(
-                                    text = app.label,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                )
-                            }
-                        }
-                    }
+            val themeMode by settings.theme.collectAsState(initial = com.cyrasafia.openappdialer.data.ThemeMode.SYSTEM)
+
+            // 设置页内返回 → 回搜索页；搜索页返回 → 关浮窗（默认 finish）
+            BackHandler(enabled = showSettings) { showSettings = false }
+
+            OpenAppDialerTheme(mode = themeMode) {
+                if (showSettings) {
+                    SettingsScreen(
+                        currentTheme = themeMode,
+                        onSelectTheme = { mode ->
+                            appScope.launch { settings.setTheme(mode) }
+                        },
+                    )
+                } else {
+                    SearchScreen(
+                        viewModel = searchViewModel,
+                        iconCache = iconCache,
+                        onLaunch = ::launchApp,
+                        onOpenSettings = { showSettings = true },
+                    )
                 }
             }
+        }
+    }
+
+    /** 启动应用（spec F4）：记录使用 → 启动 → finish；失败 toast + 应用详情兜底 */
+    private fun launchApp(entry: AppEntry) {
+        repository.recordLaunch(entry.packageName)
+        val intent = packageManager.getLaunchIntentForPackage(entry.packageName)
+        try {
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+                finish()
+            } else {
+                openAppDetails(entry.packageName)
+                finish()
+            }
+        } catch (e: Exception) {
+            // 冻结/受限等异常场景（spec F4 验收项）
+            Toast.makeText(this, R.string.launch_failed, Toast.LENGTH_SHORT).show()
+            openAppDetails(entry.packageName)
+            finish()
+        }
+    }
+
+    private fun openAppDetails(pkg: String) {
+        runCatching {
+            startActivity(
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.fromParts("package", pkg, null),
+                ),
+            )
         }
     }
 

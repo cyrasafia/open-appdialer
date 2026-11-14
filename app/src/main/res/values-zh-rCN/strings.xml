@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Open AppDialer</string>
+    <string name="search_hint">输入应用名拼音</string>
+    <string name="no_results">无匹配应用</string>
+    <string name="clear">清空</string>
+    <string name="key_clear">清空输入，长按进入设置</string>
+    <string name="more_matches_fmt">还有 %1$d 个匹配，继续输入缩小范围</string>
+    <string name="match_count_fmt">匹配 %1$d 个</string>
+    <string name="settings_title">设置</string>
+    <string name="theme_label">主题</string>
+    <string name="theme_system">跟随系统</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+    <string name="about_label">关于</string>
+    <string name="version_fmt">版本 %1$s</string>
+    <string name="license_label">许可证：GPL-3.0</string>
+    <string name="repo_url">github.com/cyrasafia/open-appdialer</string>
+    <string name="launch_failed">无法启动应用</string>
+</resources>
