@@ -1,24 +1,36 @@
 package com.cyrasafia.openappdialer.data
 
+import com.cyrasafia.openappdialer.search.DefaultPinyinSource
+import com.cyrasafia.openappdialer.search.LabelIndex
+import com.cyrasafia.openappdialer.search.LabelIndexer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
-/** spec F1：缓存读写、损坏重建、schema 演进 */
+/** spec F1：缓存读写、索引压缩编解码、损坏/schema 重建 */
 class AppsCacheTest {
 
     @get:Rule
     val tmp = TemporaryFolder()
 
+    private val pinyin = DefaultPinyinSource()
+
     private fun entry(
         pkg: String = "com.x",
-        label: String = "X",
+        label: String = "微信",
         install: Long = 1_000L,
-        count: Int = 0,
-        last: Long = 0L,
-    ) = AppEntry(pkg, label, install, count, last)
+        count: Int = 3,
+        last: Long = 99L,
+    ) = AppEntry(
+        packageName = pkg,
+        label = label,
+        firstInstallTime = install,
+        launchCount = count,
+        lastLaunchAt = last,
+        index = LabelIndexer.index(label, pinyin),
+    )
 
     @Test
     fun `missing file returns null`() {
@@ -26,16 +38,23 @@ class AppsCacheTest {
     }
 
     @Test
-    fun `roundtrip preserves entries and usage`() {
+    fun `roundtrip preserves entries usage and index`() {
         val cache = AppsCache(tmp.newFile())
-        val data = AppsCacheData(
-            apps = listOf(
-                entry("com.weixin", "微信", 1L, count = 3, last = 99L),
-                entry("com.gmail", "Gmail", 2L),
-            ),
+        val apps = listOf(
+            entry("com.weixin", "微信"),
+            entry("com.t9", "T9启动器", count = 0, last = 0L),
+            entry("com.dm", "1DM+", count = 1, last = 5L),
         )
-        cache.save(data)
-        assertEquals(data.apps, cache.load()!!.apps)
+        cache.save(apps)
+        assertEquals(apps, cache.load())
+    }
+
+    @Test
+    fun `empty index roundtrips`() {
+        val cache = AppsCache(tmp.newFile())
+        val apps = listOf(entry("com.plain", "plain").copy(index = LabelIndex.EMPTY))
+        cache.save(apps)
+        assertEquals(apps, cache.load())
     }
 
     @Test
@@ -43,8 +62,8 @@ class AppsCacheTest {
         val file = tmp.newFile().apply { writeText("{ not json") }
         val cache = AppsCache(file)
         assertNull(cache.load())
-        cache.save(AppsCacheData(apps = listOf(entry())))
-        assertEquals(1, cache.load()!!.apps.size)
+        cache.save(listOf(entry()))
+        assertEquals(1, cache.load()!!.size)
     }
 
     @Test
@@ -52,7 +71,6 @@ class AppsCacheTest {
         val file = tmp.newFile().apply {
             writeText("""{"schemaVersion":99,"apps":[],"futureField":1}""")
         }
-        // schema 不符 → 视为无缓存（静默重建），避免旧结构缺字段
         assertNull(AppsCache(file).load())
     }
 }

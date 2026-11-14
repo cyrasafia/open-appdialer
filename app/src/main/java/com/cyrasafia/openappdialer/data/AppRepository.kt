@@ -30,11 +30,24 @@ class AppRepository(
     val apps: StateFlow<List<AppEntry>> = _apps.asStateFlow()
 
     @Volatile
+    private var initialLoadStarted = false
+
+    @Volatile
     private var lastScanAt = 0L
 
+    /**
+     * 全异步（spec v2.2）：绝不阻塞主线程/首帧——冷启动面板立即渲染，
+     * 缓存列表在后台补上，随后节流全量校准。
+     */
     fun ensureLoaded() {
-        if (_apps.value.isEmpty()) {
-            cache.load()?.let { cached -> _apps.value = cached.apps }
+        if (!initialLoadStarted) {
+            initialLoadStarted = true
+            scope.launch {
+                cache.load()?.let { cached -> _apps.value = cached }
+                lastScanAt = System.currentTimeMillis()
+                fullScan()
+            }
+            return
         }
         val now = System.currentTimeMillis()
         if (now - lastScanAt >= RESCAN_THROTTLE_MS) {
@@ -73,7 +86,7 @@ class AppRepository(
                 .sortedBy { it.label }
                 .toList()
             _apps.value = entries
-            cache.save(AppsCacheData(apps = entries))
+            cache.save(entries)
         }
     }
 
@@ -124,7 +137,7 @@ class AppRepository(
     }
 
     private suspend fun persist() = withContext(Dispatchers.IO) {
-        cache.save(AppsCacheData(apps = _apps.value))
+        cache.save(_apps.value)
     }
 
     companion object {
