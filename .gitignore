@@ -1,0 +1,31 @@
+# Built application files
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Java/Kotlin build
+build/
+out/
+*.class
+
+# Gradle
+.gradle/
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+captures/
+.cxx/
+
+# Android
+.data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude / agent artifacts
+.claude/
+CLAUDE.md
