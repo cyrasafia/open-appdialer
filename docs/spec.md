@@ -1,4 +1,4 @@
-# Open AppDialer 技术规格（Spec v1.5）
+# Open AppDialer 技术规格（Spec v1.6）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -38,7 +38,7 @@
 ### F1 应用数据层
 
 - **数据源**：`PackageManager.queryIntentActivities(MainActivityIntent)`，即**当前用户 profile** 的所有可启动应用；不跨 work profile / 私密空间聚合（Q6 已定）。
-- **权限**：manifest 声明 `QUERY_ALL_PACKAGES`（API 30+ 必需；安装时授予，无运行时弹窗）。声明理由：应用搜索是核心功能。`INTERNET` 永不申请。
+- **权限**：manifest 用 `<queries>` 元素声明 `<intent>` MAIN/LAUNCHER 可见性——仅可见带桌面入口的应用（与数据源精确对齐），**不使用** `QUERY_ALL_PACKAGES`（免 Play 专项审核），安装时授予、无运行时弹窗。`INTERNET` 永不申请。
 - **应用条目字段**：包名、label、预计算匹配序列、首次安装时间（`firstInstallTime`）、启动次数、最近启动时间。
 - **监听**：`PACKAGE_ADDED / REMOVED / REPLACED / CHANGED` 广播 + resume 时 diff 兜底（防漏广播），增量更新列表与缓存。
 - **缓存**（`filesDir/apps.json`）：
@@ -140,7 +140,7 @@
 | 冷启动到可输入 | < 500ms（缓存命中） | `adb shell am start -W`，CI 手动清单 |
 | 按键到结果更新 | < 1 帧（**8ms @ 120Hz 高刷**），500 应用 fixture 下匹配 < 5ms | JVM 单测基准 |
 | APK 体积 | ≤ 2MB | CI 构建产物检查，超限失败 |
-| 权限 | 仅 `QUERY_ALL_PACKAGES`（+ 系统性 `VIBRATE` 如需触觉） | manifest 审查 |
+| 权限 | 零权限声明（`<queries>` 元素声明可见性，见 F1；触觉反馈无需 `VIBRATE`） | manifest 审查 |
 | 隐私 | 无网络、无统计、无崩溃上报，数据仅本地 | manifest + 代码审查 |
 | 兼容 | minSdk 23，targetSdk 37（2026 当前），跟进新版本 | CI 矩阵 |
 | 高刷屏 | 跟随系统刷新率（90/120Hz+），不锁定 60fps；帧预算按 8ms 设计 | 真机手动验收（120Hz 设备） |
@@ -237,6 +237,7 @@ data class AppEntry(
 
 ## 10. 变更记录
 
+- 2026-11-14 v1.6 权限方案改为 `<queries>` 元素（替代 QUERY_ALL_PACKAGES），实现零权限声明
 - 2026-11-14 v1.5 UI 框架定案 Compose；帧预算按高刷 8ms（120Hz）设计；技术设计补 R8 + Baseline Profiles 与高刷策略
 - 2026-11-14 v1.4 数字 1 并入 2 键（含 1 应用名可整体匹配）；数据源定为仅当前 profile，不跨 work profile / 私密空间聚合
 - 2026-11-14 v1.3 新装阈值定为 2 小时（"刚装好-来找"场景）；按键触觉定案：常开、无声
