@@ -48,10 +48,11 @@ class AppsCacheTest {
     }
 
     @Test
-    fun `unknown keys from future schema are ignored`() {
+    fun `future schema version triggers rebuild`() {
         val file = tmp.newFile().apply {
             writeText("""{"schemaVersion":99,"apps":[],"futureField":1}""")
         }
-        assertEquals(0, AppsCache(file).load()!!.apps.size)
+        // schema 不符 → 视为无缓存（静默重建），避免旧结构缺字段
+        assertNull(AppsCache(file).load())
     }
 }

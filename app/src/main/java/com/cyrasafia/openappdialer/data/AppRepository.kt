@@ -2,6 +2,9 @@ package com.cyrasafia.openappdialer.data
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import com.cyrasafia.openappdialer.search.DefaultPinyinSource
+import com.cyrasafia.openappdialer.search.LabelIndexer
+import com.cyrasafia.openappdialer.search.PinyinSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +23,7 @@ class AppRepository(
     private val pm: PackageManager,
     private val cache: AppsCache,
     private val scope: CoroutineScope,
+    private val pinyinSource: PinyinSource = DefaultPinyinSource(),
 ) {
 
     private val _apps = MutableStateFlow<List<AppEntry>>(emptyList())
@@ -52,9 +56,18 @@ class AppRepository(
                     val installedAt = runCatching {
                         pm.getPackageInfo(pkg, 0).firstInstallTime
                     }.getOrDefault(0L)
+                    val indexed = LabelIndexer.index(label, pinyinSource)
                     val usage = old[pkg]
-                    if (usage != null) usage.copy(label = label, firstInstallTime = installedAt)
-                    else AppEntry(packageName = pkg, label = label, firstInstallTime = installedAt)
+                    if (usage != null) {
+                        usage.copy(label = label, firstInstallTime = installedAt, index = indexed)
+                    } else {
+                        AppEntry(
+                            packageName = pkg,
+                            label = label,
+                            firstInstallTime = installedAt,
+                            index = indexed,
+                        )
+                    }
                 }
                 .distinctBy { it.packageName }
                 .sortedBy { it.label }
@@ -98,6 +111,7 @@ class AppRepository(
                 firstInstallTime = installedAt,
                 launchCount = old?.launchCount ?: 0,
                 lastLaunchAt = old?.lastLaunchAt ?: 0L,
+                index = LabelIndexer.index(label, pinyinSource),
             )
             _apps.value = _apps.value.filterNot { it.packageName == pkg } + entry
             persist()

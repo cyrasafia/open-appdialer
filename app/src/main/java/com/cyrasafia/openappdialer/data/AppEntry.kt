@@ -1,10 +1,11 @@
 package com.cyrasafia.openappdialer.data
 
+import com.cyrasafia.openappdialer.search.LabelIndex
 import kotlinx.serialization.Serializable
 
 /**
  * 应用条目（spec F1）。
- * M2 将新增预计算匹配序列字段（全拼/首字母数字串），schema 随缓存版本演进。
+ * index 为预计算匹配索引（spec F2，M2 引入，随缓存 schema v2 持久化）。
  */
 @Serializable
 data class AppEntry(
@@ -15,4 +16,5 @@ data class AppEntry(
     val launchCount: Int = 0,
     /** 最近一次从本应用启动的时间 epoch ms；0 = 从未使用 */
     val lastLaunchAt: Long = 0L,
+    val index: LabelIndex = LabelIndex.EMPTY,
 )

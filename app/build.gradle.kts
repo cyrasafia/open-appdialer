@@ -54,6 +54,9 @@ dependencies {
     // F1 数据层缓存序列化（apps.json）
     implementation(libs.kotlinx.serialization.json)
 
+    // vendored TinyPinyin 的传递依赖（Aho-Corasick，Apache-2.0）
+    implementation(libs.ahocorasick)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 }

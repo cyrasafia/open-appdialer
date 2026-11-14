@@ -25,6 +25,7 @@ class AppsCache(private val file: File) {
         if (!file.exists()) return null
         return runCatching { json.decodeFromString<AppsCacheData>(file.readText()) }
             .getOrNull() // 损坏 → null → 重建
+            ?.takeIf { it.schemaVersion == SCHEMA_VERSION } // 旧 schema → 视为无缓存，重建（含重新索引）
     }
 
     fun save(data: AppsCacheData) {
@@ -39,7 +40,8 @@ class AppsCache(private val file: File) {
     }
 
     companion object {
-        const val SCHEMA_VERSION = 1
+        /** v2：AppEntry 新增 LabelIndex（spec F2 预计算匹配序列） */
+        const val SCHEMA_VERSION = 2
         const val FILE_NAME = "apps.json"
     }
 }
