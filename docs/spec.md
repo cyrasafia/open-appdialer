@@ -1,4 +1,4 @@
-# Open AppDialer 技术规格（Spec v2.7）
+# Open AppDialer 技术规格（Spec v2.8）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -255,6 +255,7 @@ data class AppEntry(
 
 ## 10. 变更记录
 
+- 2026-11-15 v2.8 回滚 MIUI 快捷方式特殊处理（设置页授权入口、失败提示、权限页直达），暂不针对 MIUI 做适配。实测结论保留：未授予系统私有"创建桌面快捷方式"权限时 `requestPinShortcut` 返回 true 且静默丢弃（AppOps 权限，无法主动请求/查询，小米官方建议引导用户手动开启），授权后功能正常；相关实现见 git 历史可随时恢复
 - 2026-11-14 v2.7 新增候选长按菜单：添加桌面快捷方式（requestPinShortcut，26+）/ 查看详情 / 卸载
 - 2026-11-14 v2.6 尝试并回滚 windowShowWallpaper（MIUI 上垫出应用图标白底）；结论：启动一帧闪烁为 MIUI 桌面自绘动效，接受遗留；overlay 唤起方案留 backlog
 - 2026-11-14 v2.5 真机反馈四轮：点击候选后冻结列表（防使用数据重排导致点击项跳位）；候选屏蔽自身；图标放大至 60dp（与系统启动器相当）并收紧间距给名称让宽；windowAnimationStyle 清空启动动画（MIUI taskOpen 缩放导致桌面变暗约 1s，小米官方文档建议的禁用方式）
