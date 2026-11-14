@@ -22,8 +22,11 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false // R8 在 M4 打磨阶段开启
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // 本地试用阶段用 debug 签名；正式发布前换独立 keystore（spec 6.4）
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
