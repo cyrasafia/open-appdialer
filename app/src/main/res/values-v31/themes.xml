@@ -8,6 +8,7 @@
         <item name="android:windowCloseOnTouchOutside">true</item>
         <item name="android:backgroundDimEnabled">false</item>
         <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowShowWallpaper">true</item>
         <item name="android:windowSplashScreenBackground">@android:color/transparent</item>
         <item name="android:windowAnimationStyle">@style/NullWindowAnimations</item>
     </style>
