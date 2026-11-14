@@ -1,4 +1,4 @@
-# Open AppDialer 技术规格（Spec v1.4）
+# Open AppDialer 技术规格（Spec v1.5）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -138,19 +138,22 @@
 | 指标 | 目标 | 度量方式 |
 |---|---|---|
 | 冷启动到可输入 | < 500ms（缓存命中） | `adb shell am start -W`，CI 手动清单 |
-| 按键到结果更新 | < 1 帧（16ms），500 应用 fixture 下匹配 < 5ms | JVM 单测基准 |
+| 按键到结果更新 | < 1 帧（**8ms @ 120Hz 高刷**），500 应用 fixture 下匹配 < 5ms | JVM 单测基准 |
 | APK 体积 | ≤ 2MB | CI 构建产物检查，超限失败 |
 | 权限 | 仅 `QUERY_ALL_PACKAGES`（+ 系统性 `VIBRATE` 如需触觉） | manifest 审查 |
 | 隐私 | 无网络、无统计、无崩溃上报，数据仅本地 | manifest + 代码审查 |
 | 兼容 | minSdk 23，targetSdk 37（2026 当前），跟进新版本 | CI 矩阵 |
+| 高刷屏 | 跟随系统刷新率（90/120Hz+），不锁定 60fps；帧预算按 8ms 设计 | 真机手动验收（120Hz 设备） |
 
 ## 6. 技术设计
 
 ### 6.1 选型
 
-- Kotlin + Jetpack Compose（Material 3），单 `:app` module，无 DI 框架（手动构造），`StateFlow` 单向数据流
-- 体积账：Compose 基线 ~1.5MB；若最终 > 2MB 或坚持 <1MB，退化方案是 View 体系（见开放问题 Q1）
-- Gradle Kotlin DSL + version catalog + R8/Minify
+- Kotlin + Jetpack Compose（Material 3）（Q1 已定），单 `:app` module，无 DI 框架（手动构造），`StateFlow` 单向数据流
+- 体积账：Compose 基线 ~1.5MB，上限 2MB（CI 检查）
+- R8/Minify + Baseline Profiles（Compose 库自带 ProfileInstaller），压冷启动差距
+- 高刷：不调用 `setFrameRate` 锁帧，跟随系统刷新率（触摸交互自动升频）
+- Gradle Kotlin DSL + version catalog
 
 ### 6.2 结构
 
@@ -206,7 +209,7 @@ data class AppEntry(
 
 - 数据层：缓存损坏重建、包事件增量更新（Robolectric）
 - UI：空态/无结果/清空（左上键短按清空全部）、返回键与点击浮窗外直接关闭、分页（每页 3、最多 2 页、输入变化回到第 1 页、第 2 页"还有 N 个"提示）、空态排序（新安装 > 最近使用降序）（Compose 测试）
-- 手动验收清单（随每个里程碑）：真机冷启动计时、冻结应用启动、深浅主题切换、旋转与分屏不崩溃、TalkBack 可操作键盘
+- 手动验收清单（随每个里程碑）：真机冷启动计时、冻结应用启动、深浅主题切换、旋转与分屏不崩溃、TalkBack 可操作键盘、120Hz 设备滑动翻页流畅
 
 ## 8. 里程碑
 
@@ -222,7 +225,7 @@ data class AppEntry(
 
 | # | 问题 | 默认值 |
 |---|---|---|
-| Q1 | Compose（~2MB）vs View（<1MB）？ | Compose，体积上限 2MB；超出再评估 |
+| Q1 | Compose vs View？ | 已定：Compose，体积上限 2MB（v1.5） |
 | Q2 | 空输入显示什么？ | 已定：新安装优先（≤3 天），其余按最近使用降序，取前 6（v1.1） |
 | Q3 | 结果展示形式？ | 已定：横滑分页，每页 3 项、最多 2 页（v1.1） |
 | Q4 | 按键触觉/声音？ | 已定：触觉常开、无声（v1.3） |
@@ -234,6 +237,7 @@ data class AppEntry(
 
 ## 10. 变更记录
 
+- 2026-11-14 v1.5 UI 框架定案 Compose；帧预算按高刷 8ms（120Hz）设计；技术设计补 R8 + Baseline Profiles 与高刷策略
 - 2026-11-14 v1.4 数字 1 并入 2 键（含 1 应用名可整体匹配）；数据源定为仅当前 profile，不跨 work profile / 私密空间聚合
 - 2026-11-14 v1.3 新装阈值定为 2 小时（"刚装好-来找"场景）；按键触觉定案：常开、无声
 - 2026-11-14 v1.2 左上键短按改为一键清空（取消退格）；主界面定为浮窗形态，返回键/点击浮窗外直接关闭且不清空（新增 F8）
