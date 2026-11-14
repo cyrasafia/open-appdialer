@@ -26,6 +26,7 @@ APK 产物命名：`OpenAppDialer-v<版本>[-debug].apk`（如 `OpenAppDialer-v0
 ## Conventions
 
 - 文档驱动：`docs/spec.md` 是唯一实现依据，行为变更先改 spec（版本号 +1，变更记录追加）
+- **打包/发版仅限用户明确要求**：不要主动 assembleRelease / 打 tag / gh release；日常代码提交照常
 - 匹配引擎（`search/` 包）必须纯 Kotlin、无 Android 依赖，表驱动单测先行（spec 7.1）
 - 无网络权限、无运行时权限弹窗；权限清单见 manifest 注释
 - 设备安全：不要在用户的物理手机上安装/运行测试构建，除非用户明确要求
