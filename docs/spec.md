@@ -1,4 +1,4 @@
-# Open AppDialer 技术规格（Spec v2.1）
+# Open AppDialer 技术规格（Spec v2.2）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -138,7 +138,7 @@
 - 系统返回键（含返回手势）或点击浮窗外区域：**直接关闭浮窗，不清空输入**
 - 浮窗宽度贴屏留边距，横竖屏与分屏可用；视觉细节实现时定
 - 不需要 `SYSTEM_ALERT_WINDOW` 权限（跨应用悬浮唤起仍属 backlog）
-- 禁用 starting window 预览（`windowDisablePreview`），启动无黑底闪烁（v2.1）
+- 禁用 starting window 预览，且 `windowIsTranslucent` 跳过 Android 12+ 系统 SplashScreen（消除启动黑底的根因），v31 覆盖将 splash 背景亦置透明（v2.1/v2.2）
 - `excludeFromRecents`：关闭后不出现在后台窗口列表（v2.1）
 
 ## 5. 非功能需求
@@ -245,6 +245,7 @@ data class AppEntry(
 
 ## 10. 变更记录
 
+- 2026-11-14 v2.2 启动黑底修复改用 windowIsTranslucent（12+ 跳过 SplashScreen 的正解，windowDisablePreview 不够）+ v31 透明 splash 背景；框架主题合并为单套（明暗由 Compose 接管）
 - 2026-11-14 v2.1 真机反馈二轮：禁用 starting window 消除启动黑底；excludeFromRecents 移除后台列表残影；移除"还有 N 个"页脚；候选名称单行省略
 - 2026-11-14 v2.0 真机反馈四项：候选改横排（图标上名称下）、移除数字回显、共键数字并排展示（1 2 / 9 0）、浮窗底部对齐（下缘约高于 dock 16dp）；结果区高度恒定
 - 2026-11-14 v1.9 errata：微信全拼键串更正为 934946（原 93946 漏算一位；术语表/F2/7.1 同步修正），实现引擎无误

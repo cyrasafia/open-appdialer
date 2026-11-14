@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 浮窗主题（spec F8）：透明背景 + 遮罩 + 点外部关闭 -->
-    <style name="Theme.OpenAppDialer" parent="@android:style/Theme.Material.Light.Dialog.NoActionBar">
+    <!--
+      浮窗主题（spec F8）：
+      - windowIsTranslucent：Android 12+ 跳过系统 SplashScreen（黑底闪烁根因），旧版本跳过 starting window
+      - windowIsFloating + 透明背景：不占满全屏
+      - 点外部关闭（windowCloseOnTouchOutside）+ 背后遮罩
+      - 明暗色由 Compose 主题接管，框架层无需 Light/night 变体
+    -->
+    <style name="Theme.OpenAppDialer" parent="@android:style/Theme.Material.Dialog.NoActionBar">
         <item name="android:windowIsFloating">true</item>
+        <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowCloseOnTouchOutside">true</item>
         <item name="android:backgroundDimEnabled">true</item>
-        <!-- 禁用 starting window 预览，消除启动瞬间的黑底（spec v2.1） -->
         <item name="android:windowDisablePreview">true</item>
     </style>
 </resources>
