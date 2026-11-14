@@ -42,7 +42,7 @@ fun SearchScreen(
 
     Surface(
         modifier = modifier
-            .widthIn(max = 420.dp)
+            .widthIn(max = 480.dp)
             .heightIn(max = 640.dp),
         shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -51,9 +51,11 @@ fun SearchScreen(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // 结果区：空态 / 结果 / 无结果 高度一致
+            // 结果区：空态 / 结果 / 无结果 / 主动清空 高度一致
             Box(modifier = Modifier.height(RESULT_AREA_HEIGHT)) {
                 when (val state = uiState) {
+                    is SearchUiState.Blank -> Unit // 主动清空后：空白（spec v2.4）
+
                     is SearchUiState.Results -> {
                         if (state.items.isEmpty()) {
                             NoResults(

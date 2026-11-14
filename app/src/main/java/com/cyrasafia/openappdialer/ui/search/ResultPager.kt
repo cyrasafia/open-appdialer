@@ -1,5 +1,6 @@
 package com.cyrasafia.openappdialer.ui.search
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,8 +19,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -28,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.cyrasafia.openappdialer.R
 import com.cyrasafia.openappdialer.data.AppEntry
 import com.cyrasafia.openappdialer.data.AppIconCache
+import com.cyrasafia.openappdialer.ui.common.pressScale
 
 private const val ITEMS_PER_PAGE = 3
 private const val MAX_PAGES = 2
@@ -104,7 +108,7 @@ fun ResultPager(
     }
 }
 
-/** 候选项（spec v2.0）：图标上、名称下，横排 3 列之一 */
+/** 候选项（spec v2.4）：图标上、名称下（紧凑字体、单行省略），无背景色，按压缩放 */
 @Composable
 private fun ResultItem(
     entry: AppEntry,
@@ -115,11 +119,15 @@ private fun ResultItem(
     val bitmap by produceState(initialValue = null as android.graphics.Bitmap?, entry.packageName) {
         value = iconCache.icon(entry.packageName)
     }
+    val interaction = remember { MutableInteractionSource() }
     Surface(
         onClick = { onLaunch(entry) },
+        interactionSource = interaction,
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = modifier.height(PAGE_HEIGHT),
+        color = Color.Transparent,
+        modifier = modifier
+            .pressScale(interaction)
+            .height(PAGE_HEIGHT),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 10.dp),
@@ -142,9 +150,10 @@ private fun ResultItem(
             }
             Text(
                 text = entry.label,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
+                softWrap = false,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
             )

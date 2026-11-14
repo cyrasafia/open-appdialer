@@ -27,14 +27,13 @@ class SearchViewModel(private val repository: AppRepository) : ViewModel() {
     val query = MutableStateFlow("")
     val queryState: StateFlow<String> = query.asStateFlow()
 
-    val uiState: StateFlow<SearchUiState> =
-        combine(query, repository.apps) { q, apps ->
-                when {
-                    q.isEmpty() -> SearchUiState.Empty(
-                        items = apps.orderForEmptyState(System.currentTimeMillis()).take(MAX_SHOWN),
-                    )
+    /** 主动清空标记（spec v2.4）：清空后候选区显示空白，不恢复默认列表 */
+    private val cleared = MutableStateFlow(false)
 
-                    else -> {
+    val uiState: StateFlow<SearchUiState> =
+        combine(query, cleared, repository.apps) { q, wasCleared, apps ->
+                when {
+                    q.isNotEmpty() -> {
                         val matched = SearchEngine.search(apps, q)
                         SearchUiState.Results(
                             query = q,
@@ -43,21 +42,29 @@ class SearchViewModel(private val repository: AppRepository) : ViewModel() {
                             bestLevel = matched.firstOrNull()?.match?.level,
                         )
                     }
+
+                    wasCleared -> SearchUiState.Blank
+
+                    else -> SearchUiState.Empty(
+                        items = apps.orderForEmptyState(System.currentTimeMillis()).take(MAX_SHOWN),
+                    )
                 }
             }
             .flowOn(Dispatchers.Default)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState.Empty(emptyList()))
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState.Blank)
 
     /** 数字键上屏（spec F3：ACTION_DOWN 触发，防丢字符） */
     fun onDigit(digit: Char) {
         if (digit in '2'..'9' && query.value.length < MAX_QUERY_LEN) {
+            cleared.value = false
             query.value += digit
         }
     }
 
-    /** 左上键短按：清空全部输入（spec v1.2） */
+    /** 左上键短按：清空全部输入，候选区置空（spec v2.4） */
     fun onClear() {
         query.value = ""
+        cleared.value = true
     }
 
     companion object {
@@ -67,6 +74,9 @@ class SearchViewModel(private val repository: AppRepository) : ViewModel() {
 }
 
 sealed interface SearchUiState {
+    /** 主动清空后的空白态（spec v2.4） */
+    data object Blank : SearchUiState
+
     /** 空输入：常用/新装应用 */
     data class Empty(val items: List<AppEntry>) : SearchUiState
 

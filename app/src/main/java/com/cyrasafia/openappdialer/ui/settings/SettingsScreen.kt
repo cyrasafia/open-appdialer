@@ -36,7 +36,7 @@ fun SettingsScreen(
 ) {
     Surface(
         modifier = modifier
-            .widthIn(max = 420.dp)
+            .widthIn(max = 480.dp)
             .heightIn(max = 640.dp),
         shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
