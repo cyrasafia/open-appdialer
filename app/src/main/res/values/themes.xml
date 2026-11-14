@@ -12,7 +12,8 @@
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowCloseOnTouchOutside">true</item>
-        <item name="android:backgroundDimEnabled">true</item>
+        <!-- 无遮罩（spec v2.3）：MIUI 应用打开动画的边缘缩放会与遮罩叠加穿帮，且遮罩曾是黑底来源 -->
+        <item name="android:backgroundDimEnabled">false</item>
         <item name="android:windowDisablePreview">true</item>
     </style>
 </resources>
