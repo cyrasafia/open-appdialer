@@ -22,4 +22,5 @@
     <string name="menu_uninstall">Uninstall</string>
     <string name="pin_shortcut_unsupported">Launcher doesn\'t support pinned shortcuts</string>
     <string name="pin_shortcut_failed">Couldn\'t pin. Grant Open AppDialer the \"Create home screen shortcuts\" permission in system settings, then retry</string>
+    <string name="shortcut_permission_entry">Home screen shortcut permission (MIUI: grant here once)</string>
 </resources>

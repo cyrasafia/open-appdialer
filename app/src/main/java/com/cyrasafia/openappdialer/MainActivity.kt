@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
                         onSelectTheme = { mode ->
                             appScope.launch { settings.setTheme(mode) }
                         },
+                        onOpenShortcutPermission = { openAppDetails(packageName) },
                     )
                 } else {
                     SearchScreen(

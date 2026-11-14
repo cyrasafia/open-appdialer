@@ -1,4 +1,4 @@
-# Open AppDialer 技术规格（Spec v2.7）
+# Open AppDialer 技术规格（Spec v2.8）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -110,6 +110,7 @@
 - 点击条目：记录使用 → 启动主 Activity intent → `finish()`
 - **长按条目弹出菜单**（v2.7）：
   - 添加桌面快捷方式：`ShortcutManager.requestPinShortcut`（图标取自内存缓存、shortLabel 为应用名、intent 为目标应用启动 intent）；仅 API 26+ 且启动器支持时显示（旧版广播方案需额外权限，不采用，保持零权限）
+    - **MIUI 已知行为**（v2.8 实测确认）：未授予系统私有的"创建桌面快捷方式"权限时，request 返回 true 但静默丢弃，无法检测失败；设置页提供授权入口（跳本应用详情页 → 权限管理），一次授权永久生效
   - 查看详情：跳转系统应用详情页并关闭浮窗
   - 卸载：`ACTION_DELETE` 系统卸载确认并关闭浮窗；列表经 `PACKAGE_REMOVED` 广播 / resume diff 自动更新
 - 启动失败（`ActivityNotFoundException` / `SecurityException` / 冻结导致的异常）：toast 提示，并尝试跳转系统应用详情页兜底；**验收：Android 15/16 真机上冻结应用可从本应用直接启动**
@@ -255,6 +256,7 @@ data class AppEntry(
 
 ## 10. 变更记录
 
+- 2026-11-15 v2.8 真机确认 MIUI 私有"创建桌面快捷方式"权限行为（未授权时 requestPinShortcut 静默失败且返回 true，授权后成功）；设置页新增授权入口
 - 2026-11-14 v2.7 新增候选长按菜单：添加桌面快捷方式（requestPinShortcut，26+）/ 查看详情 / 卸载
 - 2026-11-14 v2.6 尝试并回滚 windowShowWallpaper（MIUI 上垫出应用图标白底）；结论：启动一帧闪烁为 MIUI 桌面自绘动效，接受遗留；overlay 唤起方案留 backlog
 - 2026-11-14 v2.5 真机反馈四轮：点击候选后冻结列表（防使用数据重排导致点击项跳位）；候选屏蔽自身；图标放大至 60dp（与系统启动器相当）并收紧间距给名称让宽；windowAnimationStyle 清空启动动画（MIUI taskOpen 缩放导致桌面变暗约 1s，小米官方文档建议的禁用方式）

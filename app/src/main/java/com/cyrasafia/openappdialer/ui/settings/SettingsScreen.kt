@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +33,7 @@ import com.cyrasafia.openappdialer.data.ThemeMode
 fun SettingsScreen(
     currentTheme: ThemeMode,
     onSelectTheme: (ThemeMode) -> Unit,
+    onOpenShortcutPermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -75,6 +77,11 @@ fun SettingsScreen(
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+            // MIUI 私有"创建桌面快捷方式"权限入口（spec v2.8）：未授权时 requestPinShortcut 静默失败
+            TextButton(onClick = onOpenShortcutPermission) {
+                Text(stringResource(R.string.shortcut_permission_entry))
+            }
 
             Text(
                 text = stringResource(R.string.about_label),
