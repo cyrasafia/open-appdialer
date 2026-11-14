@@ -24,8 +24,9 @@ jobs:
 
       - name: APK size guard (spec: release ≤ 2MB)
         run: |
-          SIZE=$(stat -c%s app/build/outputs/apk/release/app-release.apk)
-          echo "release APK size: $SIZE bytes ($(du -h app/build/outputs/apk/release/app-release.apk | cut -f1))"
+          APK=$(ls app/build/outputs/apk/release/OpenAppDialer-v*.apk | head -1)
+          SIZE=$(stat -c%s "$APK")
+          echo "release APK: $APK, $SIZE bytes ($(du -h "$APK" | cut -f1))"
           if [ "$SIZE" -gt 2097152 ]; then
             echo "::error::release APK exceeds 2MB spec limit: $SIZE bytes"; exit 1
           fi

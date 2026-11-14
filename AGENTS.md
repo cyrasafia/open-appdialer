@@ -18,8 +18,10 @@ JDK 27（默认 java）对 Gradle 9.3.1 太新，务必先 export 上面的 JAVA
 ```bash
 ./gradlew assembleDebug          # 构建
 ./gradlew testDebugUnitTest      # 单测（匹配引擎表驱动测试在 app/src/test）
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/release/OpenAppDialer-v*.apk
 ```
+
+APK 产物命名：`OpenAppDialer-v<版本>[-debug].apk`（如 `OpenAppDialer-v0.1.1.apk`）。
 
 ## Conventions
 

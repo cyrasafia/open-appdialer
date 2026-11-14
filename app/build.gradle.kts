@@ -36,6 +36,15 @@ android {
         versionName = "0.1.1"
     }
 
+    applicationVariants.all {
+        outputs.all {
+            // 产物命名：应用名-v版本号（debug 追加 -debug）
+            val suffix = if (buildType.name == "debug") "-debug" else ""
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl)
+                .outputFileName = "OpenAppDialer-v${versionName}${suffix}.apk"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
