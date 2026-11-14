@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  自适应图标前景：3×3 九宫格键（108dp 画布，内容居中 62dp 安全区内）。
-  右下键带 "0" 提示（9/0 共键），左上键为空心环（清空/设置键），呼应键盘布局。
+  自适应图标前景：3×3 九宫格键。
+  内容收缩到 44dp（spec v2.6 修正：62dp 超出 66dp 圆形安全区会被蒙版切角，
+  44dp 方形对角线角距中心 31.1dp < 33dp 安全半径）。
+  左上键为空心环（清空/设置键），呼应键盘布局。
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -9,62 +11,58 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 单个圆角方块 16×16 r5，随 group 平移 -->
-    <!-- 左上（23,23）：空心环 = 功能键 -->
+    <!-- 单个圆角方块 12×12 r4，随 group 平移；网格间距 4，起点 32 -->
+    <!-- 左上（32,32）：空心环 = 功能键 -->
     <group
-        android:translateX="23"
-        android:translateY="23">
+        android:translateX="32"
+        android:translateY="32">
         <path
-            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z"
+            android:pathData="M4,0 h4 a4,4 0 0 1 4,4 v4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 v-4 a4,4 0 0 1 4,-4 z"
             android:strokeColor="#FFFFFF"
-            android:strokeWidth="3"
+            android:strokeWidth="2"
             android:fillColor="#00000000" />
     </group>
 
-    <group android:translateX="46" android:translateY="23">
+    <group android:translateX="48" android:translateY="32">
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
+            android:pathData="M4,0 h4 a4,4 0 0 1 4,4 v4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 v-4 a4,4 0 0 1 4,-4 z" />
     </group>
-    <group android:translateX="69" android:translateY="23">
+    <group android:translateX="64" android:translateY="32">
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
-    </group>
-
-    <group android:translateX="23" android:translateY="46">
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
-    </group>
-    <group android:translateX="46" android:translateY="46">
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
-    </group>
-    <group android:translateX="69" android:translateY="46">
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
+            android:pathData="M4,0 h4 a4,4 0 0 1 4,4 v4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 v-4 a4,4 0 0 1 4,-4 z" />
     </group>
 
-    <group android:translateX="23" android:translateY="69">
+    <group android:translateX="32" android:translateY="48">
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
+            android:pathData="M4,0 h4 a4,4 0 0 1 4,4 v4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 v-4 a4,4 0 0 1 4,-4 z" />
     </group>
-    <group android:translateX="46" android:translateY="69">
+    <group android:translateX="48" android:translateY="48">
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
+            android:pathData="M4,0 h4 a4,4 0 0 1 4,4 v4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 v-4 a4,4 0 0 1 4,-4 z" />
     </group>
-    <!-- 右下（69,69）：9/0 共键，加小圆点提示 0 -->
-    <group android:translateX="69" android:translateY="69">
+    <group android:translateX="64" android:translateY="48">
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
+            android:pathData="M4,0 h4 a4,4 0 0 1 4,4 v4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 v-4 a4,4 0 0 1 4,-4 z" />
+    </group>
+
+    <group android:translateX="32" android:translateY="64">
         <path
-            android:fillColor="#4355B9"
-            android:pathData="M8,8 m-2.6,0 a2.6,2.6 0 1 1 5.2,0 a2.6,2.6 0 1 1 -5.2,0" />
+            android:fillColor="#FFFFFF"
+            android:pathData="M4,0 h4 a4,4 0 0 1 4,4 v4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 v-4 a4,4 0 0 1 4,-4 z" />
+    </group>
+    <group android:translateX="48" android:translateY="64">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M4,0 h4 a4,4 0 0 1 4,4 v4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 v-4 a4,4 0 0 1 4,-4 z" />
+    </group>
+    <group android:translateX="64" android:translateY="64">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M4,0 h4 a4,4 0 0 1 4,4 v4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 v-4 a4,4 0 0 1 4,-4 z" />
     </group>
 </vector>
