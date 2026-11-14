@@ -15,5 +15,23 @@
         <!-- 无遮罩（spec v2.3）：MIUI 应用打开动画的边缘缩放会与遮罩叠加穿帮，且遮罩曾是黑底来源 -->
         <item name="android:backgroundDimEnabled">false</item>
         <item name="android:windowDisablePreview">true</item>
+        <!-- 清空启动/关闭动画（spec v2.5）：MIUI 的 taskOpen 缩放动画会让桌面变暗约 1s，
+             小米官方文档建议的禁用方式即覆盖 windowAnimationStyle -->
+        <item name="android:windowAnimationStyle">@style/NullWindowAnimations</item>
+    </style>
+
+    <style name="NullWindowAnimations" parent="@android:style/Animation.Activity">
+        <item name="android:taskOpenEnterAnimation">@anim/no_anim</item>
+        <item name="android:taskOpenExitAnimation">@anim/no_anim</item>
+        <item name="android:taskCloseEnterAnimation">@anim/no_anim</item>
+        <item name="android:taskCloseExitAnimation">@anim/no_anim</item>
+        <item name="android:activityOpenEnterAnimation">@anim/no_anim</item>
+        <item name="android:activityOpenExitAnimation">@anim/no_anim</item>
+        <item name="android:activityCloseEnterAnimation">@anim/no_anim</item>
+        <item name="android:activityCloseExitAnimation">@anim/no_anim</item>
+        <item name="android:wallpaperOpenEnterAnimation">@anim/no_anim</item>
+        <item name="android:wallpaperOpenExitAnimation">@anim/no_anim</item>
+        <item name="android:wallpaperCloseEnterAnimation">@anim/no_anim</item>
+        <item name="android:wallpaperCloseExitAnimation">@anim/no_anim</item>
     </style>
 </resources>

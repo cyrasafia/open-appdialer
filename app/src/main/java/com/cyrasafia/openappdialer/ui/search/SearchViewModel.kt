@@ -30,8 +30,14 @@ class SearchViewModel(private val repository: AppRepository) : ViewModel() {
     /** 主动清空标记（spec v2.4）：清空后候选区显示空白，不恢复默认列表 */
     private val cleared = MutableStateFlow(false)
 
+    /** 启动冻结（spec v2.5）：点击候选后冻结列表，防止 recordLaunch 触发重排导致点击项跳位 */
+    private val frozen = MutableStateFlow(false)
+
+    private var lastState: SearchUiState = SearchUiState.Blank
+
     val uiState: StateFlow<SearchUiState> =
-        combine(query, cleared, repository.apps) { q, wasCleared, apps ->
+        combine(query, cleared, repository.apps, frozen) { q, wasCleared, apps, isFrozen ->
+                if (isFrozen) return@combine lastState
                 when {
                     q.isNotEmpty() -> {
                         val matched = SearchEngine.search(apps, q)
@@ -48,7 +54,7 @@ class SearchViewModel(private val repository: AppRepository) : ViewModel() {
                     else -> SearchUiState.Empty(
                         items = apps.orderForEmptyState(System.currentTimeMillis()).take(MAX_SHOWN),
                     )
-                }
+                }.also { lastState = it }
             }
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState.Blank)
@@ -65,6 +71,11 @@ class SearchViewModel(private val repository: AppRepository) : ViewModel() {
     fun onClear() {
         query.value = ""
         cleared.value = true
+    }
+
+    /** 点击候选启动前调用（spec v2.5）：冻结列表防止跳位 */
+    fun onLaunching() {
+        frozen.value = true
     }
 
     companion object {

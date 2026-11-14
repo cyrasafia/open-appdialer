@@ -24,6 +24,8 @@ class AppRepository(
     private val cache: AppsCache,
     private val scope: CoroutineScope,
     private val pinyinSource: PinyinSource = DefaultPinyinSource(),
+    /** 屏蔽自身（spec v2.5）：不出现在候选列表 */
+    private val excludePackage: String? = null,
 ) {
 
     private val _apps = MutableStateFlow<List<AppEntry>>(emptyList())
@@ -65,6 +67,7 @@ class AppRepository(
                 .asSequence()
                 .mapNotNull { ri ->
                     val pkg = ri.activityInfo?.applicationInfo?.packageName ?: return@mapNotNull null
+                    if (pkg == excludePackage) return@mapNotNull null
                     val label = runCatching { ri.loadLabel(pm).toString() }.getOrDefault(pkg)
                     val installedAt = runCatching {
                         pm.getPackageInfo(pkg, 0).firstInstallTime
@@ -110,6 +113,7 @@ class AppRepository(
 
     private suspend fun upsert(pkg: String) = withContext(Dispatchers.IO) {
         runCatching {
+            if (pkg == excludePackage) return@runCatching
             pm.getLaunchIntentForPackage(pkg) ?: return@runCatching // 无桌面入口 → 不入列表
             val label = runCatching {
                 pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()

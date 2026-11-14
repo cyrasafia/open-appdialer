@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 零时长动画：配合 windowAnimationStyle 清空启动/关闭动画（含 MIUI taskOpen 缩放） -->
+<alpha xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="0"
+    android:fromAlpha="1"
+    android:toAlpha="1" />

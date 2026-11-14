@@ -37,7 +37,7 @@ private const val ITEMS_PER_PAGE = 3
 private const val MAX_PAGES = 2
 
 /** 单页高度（图标 + 名称），所有状态恒定（spec v2.0：浮窗高度不随结果变化） */
-val PAGE_HEIGHT = 124.dp
+val PAGE_HEIGHT = 128.dp
 
 /**
  * 结果分页（spec F4/v2.0）：HorizontalPager，每页 1 行 3 个候选（图标上、名称下）、
@@ -70,7 +70,7 @@ fun ResultPager(
             val pageItems = items.drop(page * ITEMS_PER_PAGE).take(ITEMS_PER_PAGE)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 pageItems.forEach { entry ->
                     ResultItem(
@@ -130,7 +130,7 @@ private fun ResultItem(
             .height(PAGE_HEIGHT),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 2.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -139,12 +139,12 @@ private fun ResultItem(
                 androidx.compose.foundation.Image(
                     bitmap = bmp.asImageBitmap(),
                     contentDescription = null,
-                    modifier = Modifier.size(52.dp),
+                    modifier = Modifier.size(60.dp), // 与系统启动器图标相当（spec v2.5）
                 )
             } else {
                 Surface(
-                    modifier = Modifier.size(52.dp),
-                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.size(60.dp),
+                    shape = MaterialTheme.shapes.extraSmall,
                     color = MaterialTheme.colorScheme.surfaceContainerHighest,
                 ) {}
             }

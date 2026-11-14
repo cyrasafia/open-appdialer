@@ -1,4 +1,4 @@
-# Open AppDialer 技术规格（Spec v2.4）
+# Open AppDialer 技术规格（Spec v2.5）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -110,7 +110,7 @@
 - 点击条目：记录使用 → 启动主 Activity intent → `finish()`
 - 启动失败（`ActivityNotFoundException` / `SecurityException` / 冻结导致的异常）：toast 提示，并尝试跳转系统应用详情页兜底；**验收：Android 15/16 真机上冻结应用可从本应用直接启动**
 
-**候选布局（v2.0 真机反馈）**：页内 3 个候选**横排**（图标上、名称下），不回显输入数字；结果区高度各状态恒定（浮窗高度不变）。名称用紧凑字体（labelSmall）单行省略；候选项与按键均无背景色，按压有涟漪 + 缩放动画（v2.4）。
+**候选布局（v2.0 真机反馈）**：页内 3 个候选**横排**（图标上、名称下），不回显输入数字；结果区高度各状态恒定（浮窗高度不变）。名称用紧凑字体（labelSmall）单行省略，候选项与按键均无背景色，按压有涟漪 + 缩放动画（v2.4）；图标 60dp 与系统启动器相当、间距收紧给名称让宽（v2.5）；点击候选后冻结列表，防止使用数据更新导致点击项跳位（v2.5）；候选屏蔽应用自身（v2.5）。
 
 **键面（v2.0）**：共键数字并排展示——2 键主标 `1 2`（副标 ABC）、9 键主标 `9 0`（副标 WXYZ）。
 
@@ -144,6 +144,7 @@
 - 不需要 `SYSTEM_ALERT_WINDOW` 权限（跨应用悬浮唤起仍属 backlog）
 - 禁用 starting window 预览，且 `windowIsTranslucent` 跳过 Android 12+ 系统 SplashScreen（消除启动黑底的根因），v31 覆盖将 splash 背景亦置透明（v2.1/v2.2）
 - `excludeFromRecents`：关闭后不出现在后台窗口列表（v2.1）
+- 启动/关闭动画置空（`windowAnimationStyle` 覆盖 taskOpen 等，spec v2.5）：消除 MIUI 启动缩放动画导致的桌面变暗约 1s（小米官方文档建议方案）
 
 ## 5. 非功能需求
 
@@ -249,6 +250,7 @@ data class AppEntry(
 
 ## 10. 变更记录
 
+- 2026-11-14 v2.5 真机反馈四轮：点击候选后冻结列表（防使用数据重排导致点击项跳位）；候选屏蔽自身；图标放大至 60dp（与系统启动器相当）并收紧间距给名称让宽；windowAnimationStyle 清空启动动画（MIUI taskOpen 缩放导致桌面变暗约 1s，小米官方文档建议的禁用方式）
 - 2026-11-14 v2.4 真机反馈三轮：清空后候选区空白（不恢复默认列表）；候选名称紧凑字体；浮层宽度上限 420→480dp；候选项与按键去背景色并增加涟漪 + 按压缩放动画；左上键改为上下布局（清空上/设置下）
 - 2026-11-14 v2.3 完全移除背景遮罩（backgroundDimEnabled=false）：MIUI 应用打开动画的边缘缩放与遮罩叠加穿帮，且遮罩即黑底来源
 - 2026-11-14 v2.2 启动黑底修复改用 windowIsTranslucent（12+ 跳过 SplashScreen 的正解，windowDisablePreview 不够）+ v31 透明 splash 背景；框架主题合并为单套（明暗由 Compose 接管）

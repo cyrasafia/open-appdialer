@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
             pm = packageManager,
             cache = AppsCache(File(filesDir, AppsCache.FILE_NAME)),
             scope = appScope,
+            excludePackage = packageName,
         )
     }
 
@@ -102,8 +103,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** 启动应用（spec F4）：记录使用 → 启动 → finish；失败 toast + 应用详情兜底 */
+    /** 启动应用（spec F4）：冻结列表 → 记录使用 → 启动 → finish；失败 toast + 应用详情兜底 */
     private fun launchApp(entry: AppEntry) {
+        searchViewModel.onLaunching() // 先冻结，防止使用数据更新导致点击项跳位（spec v2.5）
         repository.recordLaunch(entry.packageName)
         val intent = packageManager.getLaunchIntentForPackage(entry.packageName)
         try {
