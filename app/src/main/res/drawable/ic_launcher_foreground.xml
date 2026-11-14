@@ -12,12 +12,12 @@
     android:viewportHeight="108">
 
     <!-- 单个圆角方块 12×12 r4，随 group 平移；网格间距 4，起点 32 -->
-    <!-- 左上（32,32）：空心环 = 功能键 -->
+    <!-- 左上（32,32）：空心环 = 功能键；路径内缩 1dp，使描边外沿与其他实心方块一致（12×12） -->
     <group
         android:translateX="32"
         android:translateY="32">
         <path
-            android:pathData="M4,0 h4 a4,4 0 0 1 4,4 v4 a4,4 0 0 1 -4,4 h-4 a4,4 0 0 1 -4,-4 v-4 a4,4 0 0 1 4,-4 z"
+            android:pathData="M4,1 h4 a3,3 0 0 1 3,3 v4 a3,3 0 0 1 -3,3 h-4 a3,3 0 0 1 -3,-3 v-4 a3,3 0 0 1 3,-3 z"
             android:strokeColor="#FFFFFF"
             android:strokeWidth="2"
             android:fillColor="#00000000" />
