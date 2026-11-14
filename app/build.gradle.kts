@@ -36,15 +36,6 @@ android {
         versionName = "0.1.1"
     }
 
-    applicationVariants.all {
-        outputs.all {
-            // 产物命名：应用名-v版本号（debug 追加 -debug）
-            val suffix = if (buildType.name == "debug") "-debug" else ""
-            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl)
-                .outputFileName = "OpenAppDialer-v${versionName}${suffix}.apk"
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -63,6 +54,25 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
+
+// AGP 9 已移除 outputFileName API：打包后自动重命名产物（应用名-v版本号，debug 追加 -debug）
+listOf("release" to "", "debug" to "-debug").forEach { (buildType, suffix) ->
+    val cap = buildType.replaceFirstChar { it.uppercase() }
+    val renameTask = tasks.register("rename${cap}Apk") {
+        group = "build"
+        doLast {
+            val dir = layout.buildDirectory.dir("outputs/apk/$buildType").get().asFile
+            val src = dir.resolve("app-$buildType.apk")
+            val ver = android.defaultConfig.versionName ?: "0.0.0"
+            val dst = dir.resolve("OpenAppDialer-v$ver$suffix.apk")
+            if (src.exists()) {
+                src.renameTo(dst)
+                logger.lifecycle("APK renamed -> ${dst.name}")
+            }
+        }
+    }
+    tasks.matching { it.name == "package$cap" }.configureEach { finalizedBy(renameTask) }
 }
 
 kotlin {
