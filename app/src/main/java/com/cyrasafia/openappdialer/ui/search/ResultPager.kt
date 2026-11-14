@@ -36,8 +36,8 @@ import com.cyrasafia.openappdialer.ui.common.pressScale
 private const val ITEMS_PER_PAGE = 3
 private const val MAX_PAGES = 2
 
-/** 单页高度（图标 + 名称），所有状态恒定（spec v2.0：浮窗高度不随结果变化） */
-val PAGE_HEIGHT = 128.dp
+/** 单页高度（图标 + 名称单行），所有状态恒定（spec v2.0：浮窗高度不随结果变化） */
+val PAGE_HEIGHT = 100.dp
 
 /**
  * 结果分页（spec F4/v2.0）：HorizontalPager，每页 1 行 3 个候选（图标上、名称下）、
@@ -130,9 +130,9 @@ private fun ResultItem(
             .height(PAGE_HEIGHT),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 2.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 2.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             val bmp = bitmap
             if (bmp != null) {
