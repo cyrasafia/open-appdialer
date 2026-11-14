@@ -5,6 +5,7 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.view.Gravity
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -66,6 +67,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 浮窗底部对齐（spec v2.0）：下缘距屏幕底约 16dp，略高于 dock/手势条区域
+        window.setGravity(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+        window.attributes = window.attributes.apply {
+            y = (16 * resources.displayMetrics.density).toInt()
+        }
+
         repository.ensureLoaded()
 
         setContent {

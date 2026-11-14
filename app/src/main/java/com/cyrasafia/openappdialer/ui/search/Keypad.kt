@@ -52,40 +52,56 @@ fun Keypad(
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             UtilityKey(onClear = onClear, onSettings = onSettings)
-            DigitKey('2', "ABC 1", onDigit)
-            DigitKey('3', "DEF", onDigit)
+            DigitKey(emits = '2', face = "12", letters = "ABC", onDigit = onDigit)
+            DigitKey(emits = '3', face = "3", letters = "DEF", onDigit = onDigit)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            DigitKey('4', "GHI", onDigit)
-            DigitKey('5', "JKL", onDigit)
-            DigitKey('6', "MNO", onDigit)
+            DigitKey(emits = '4', face = "4", letters = "GHI", onDigit = onDigit)
+            DigitKey(emits = '5', face = "5", letters = "JKL", onDigit = onDigit)
+            DigitKey(emits = '6', face = "6", letters = "MNO", onDigit = onDigit)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            DigitKey('7', "PQRS", onDigit)
-            DigitKey('8', "TUV", onDigit)
-            DigitKey('9', "0 WXYZ", onDigit)
+            DigitKey(emits = '7', face = "7", letters = "PQRS", onDigit = onDigit)
+            DigitKey(emits = '8', face = "8", letters = "TUV", onDigit = onDigit)
+            DigitKey(emits = '9', face = "90", letters = "WXYZ", onDigit = onDigit)
         }
     }
 }
 
-/** 数字键：ACTION_DOWN 上屏 + 即时触觉（spec F3 核心需求：防丢字符） */
+/**
+ * 数字键：ACTION_DOWN 上屏 + 即时触觉（spec F3 核心需求：防丢字符）。
+ * face 为键面展示：合并键并排显示（"12" = 数字 1 与 2 共键，"90" = 0 与 9 共键），
+ * emits 为上屏的键位符号（T9 查询字母表 '2'..'9'）。
+ */
 @Composable
-private fun RowScope.DigitKey(digit: Char, letters: String, onDigit: (Char) -> Unit) {
+private fun RowScope.DigitKey(emits: Char, face: String, letters: String, onDigit: (Char) -> Unit) {
     val view = LocalView.current
     KeySurface(
         modifier = Modifier
             .weight(1f)
-            .pointerInput(digit) {
+            .pointerInput(emits) {
                 awaitEachGesture {
                     awaitFirstDown(requireUnconsumed = false)
                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                    onDigit(digit)
+                    onDigit(emits)
                 }
             }
-            .semantics { contentDescription = "$digit, $letters" },
+            .semantics { contentDescription = "$face, $letters" },
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = digit.toString(), style = MaterialTheme.typography.titleLarge)
+            if (face.length == 2) {
+                // 并排双数字（1 和 2、9 和 0）
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = face[0].toString(), style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        text = face[1].toString(),
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+            } else {
+                Text(text = face, style = MaterialTheme.typography.titleLarge)
+            }
             Text(
                 text = letters,
                 style = MaterialTheme.typography.labelSmall,

@@ -1,9 +1,8 @@
 package com.cyrasafia.openappdialer.ui.search
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -19,14 +18,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.cyrasafia.openappdialer.R
 import com.cyrasafia.openappdialer.data.AppEntry
 import com.cyrasafia.openappdialer.data.AppIconCache
 
+/** 结果区总高 = 单页高度 + 页标行，各状态一致（spec v2.0：浮窗高度恒定） */
+private val RESULT_AREA_HEIGHT = PAGE_HEIGHT + 12.dp
+
 /**
- * 主搜索界面（spec F3/F4）：查询栏 + 分页结果 + 键盘。
+ * 主搜索界面（spec F3/F4/v2.0）：结果分页 + 键盘。
+ * 不回显输入数字（v2.0），结果区高度恒定。
  */
 @Composable
 fun SearchScreen(
@@ -36,7 +38,6 @@ fun SearchScreen(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val query by viewModel.queryState.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
     Surface(
@@ -50,38 +51,36 @@ fun SearchScreen(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            QueryBar(query = query, totalMatches = (uiState as? SearchUiState.Results)?.totalMatches)
-
-            when (val state = uiState) {
-                is SearchUiState.Results -> {
-                    if (state.items.isEmpty()) {
-                        NoResults(
-                            onClear = viewModel::onClear,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                        )
-                    } else {
-                        ResultPager(
-                            items = state.items.map { it.entry },
-                            totalMatches = state.totalMatches,
-                            resetKey = state.query,
-                            iconCache = iconCache,
-                            onLaunch = onLaunch,
-                        )
+            // 结果区：空态 / 结果 / 无结果 高度一致
+            Box(modifier = Modifier.height(RESULT_AREA_HEIGHT)) {
+                when (val state = uiState) {
+                    is SearchUiState.Results -> {
+                        if (state.items.isEmpty()) {
+                            NoResults(
+                                onClear = viewModel::onClear,
+                                modifier = Modifier.height(RESULT_AREA_HEIGHT),
+                            )
+                        } else {
+                            ResultPager(
+                                items = state.items.map { it.entry },
+                                totalMatches = state.totalMatches,
+                                resetKey = state.query,
+                                iconCache = iconCache,
+                                onLaunch = onLaunch,
+                            )
+                        }
                     }
-                }
 
-                is SearchUiState.Empty -> ResultPager(
-                    items = state.items,
-                    totalMatches = state.items.size,
-                    resetKey = "",
-                    iconCache = iconCache,
-                    onLaunch = onLaunch,
-                )
+                    is SearchUiState.Empty -> ResultPager(
+                        items = state.items,
+                        totalMatches = state.items.size,
+                        resetKey = "",
+                        iconCache = iconCache,
+                        onLaunch = onLaunch,
+                    )
+                }
             }
 
-            Spacer(Modifier.height(0.dp))
             Keypad(
                 onDigit = viewModel::onDigit,
                 onClear = viewModel::onClear,
@@ -91,44 +90,11 @@ fun SearchScreen(
     }
 }
 
-/** 查询展示栏：数字串大字展示（非 EditText，绝不唤起系统输入法） */
-@Composable
-private fun QueryBar(query: String, totalMatches: Int?) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(40.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        if (query.isEmpty()) {
-            Text(
-                text = stringResource(R.string.search_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            Text(
-                text = query,
-                style = MaterialTheme.typography.headlineSmall,
-                fontFamily = FontFamily.Monospace,
-            )
-            if (totalMatches != null) {
-                Text(
-                    text = stringResource(R.string.match_count_fmt, totalMatches),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
 /** 无结果态（spec F4）：提示 + 清空按钮 */
 @Composable
 private fun NoResults(onClear: () -> Unit, modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
