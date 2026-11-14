@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 临时启动图标：M4 打磨阶段替换为正式 adaptive icon -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#4355B9"
+        android:pathData="M24,4 A20,20 0 1,0 24,44 A20,20 0 1,0 24,4 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M15,13 h4 v4 h-4 Z M22,13 h4 v4 h-4 Z M29,13 h4 v4 h-4 Z M15,20 h4 v4 h-4 Z M22,20 h4 v4 h-4 Z M29,20 h4 v4 h-4 Z M15,27 h4 v4 h-4 Z M22,27 h4 v4 h-4 Z M29,27 h4 v8 h-4 Z" />
+</vector>

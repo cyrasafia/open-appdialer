@@ -1,4 +1,4 @@
-# Open AppDialer 技术规格（Spec v1.6）
+# Open AppDialer 技术规格（Spec v1.7）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -78,7 +78,7 @@
 
 **多音字**：任一读音命中即命中（重命名工具 → chongming=2466464 与 zhongming=9466464 均可搜到）。
 
-**拼音数据**：TinyPinyin（Apache-2.0，约 100KB，体积达标的关键依赖）；若多音字覆盖不足，补充自建词表。
+**拼音数据**：TinyPinyin（Apache-2.0，约 100KB，体积达标的关键依赖）。注意：其原 Maven 坐标发布在已关停的 jcenter，**M2 时以源码 vendoring 方式引入**（附带许可声明）；若多音字覆盖不足，补充自建词表。
 
 ### F3 T9 键盘（唯一输入方式）
 
@@ -142,7 +142,7 @@
 | APK 体积 | ≤ 2MB | CI 构建产物检查，超限失败 |
 | 权限 | 零权限声明（`<queries>` 元素声明可见性，见 F1；触觉反馈无需 `VIBRATE`） | manifest 审查 |
 | 隐私 | 无网络、无统计、无崩溃上报，数据仅本地 | manifest + 代码审查 |
-| 兼容 | minSdk 23，targetSdk 37（2026 当前），跟进新版本 | CI 矩阵 |
+| 兼容 | minSdk 23，compileSdk/targetSdk 36（AGP 9.1 支持上限；37 已随 SDK 安装，AGP 适配后跟进升级），长期跟进新版本 | CI 矩阵 |
 | 高刷屏 | 跟随系统刷新率（90/120Hz+），不锁定 60fps；帧预算按 8ms 设计 | 真机手动验收（120Hz 设备） |
 
 ## 6. 技术设计
@@ -237,6 +237,7 @@ data class AppEntry(
 
 ## 10. 变更记录
 
+- 2026-11-14 v1.7 compileSdk/targetSdk 定为 36：AGP 9.1 对 37 尚未支持（平台包已改名为 android-37.0 且超出 AGP 验证范围），待 AGP 适配后升级；tinypinyin 原 Maven 坐标随 jcenter 关停失效，M2 改为源码 vendoring 引入
 - 2026-11-14 v1.6 权限方案改为 `<queries>` 元素（替代 QUERY_ALL_PACKAGES），实现零权限声明
 - 2026-11-14 v1.5 UI 框架定案 Compose；帧预算按高刷 8ms（120Hz）设计；技术设计补 R8 + Baseline Profiles 与高刷策略
 - 2026-11-14 v1.4 数字 1 并入 2 键（含 1 应用名可整体匹配）；数据源定为仅当前 profile，不跨 work profile / 私密空间聚合
