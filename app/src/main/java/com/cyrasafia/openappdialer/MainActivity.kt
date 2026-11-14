@@ -159,12 +159,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** 添加桌面快捷方式（spec v2.7）：requestPinShortcut，图标取自内存缓存 */
+    /** 添加桌面快捷方式（spec v2.7）：requestPinShortcut，图标取自内存缓存；失败时提示（MIUI 需授予私有"创建桌面快捷方式"权限） */
     private fun pinShortcut(entry: AppEntry) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val sm = getSystemService(ShortcutManager::class.java)
         if (sm == null || !sm.isRequestPinShortcutSupported) {
-            Toast.makeText(this, R.string.pin_shortcut_unsupported, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.pin_shortcut_unsupported, Toast.LENGTH_LONG).show()
             return
         }
         appScope.launch {
@@ -172,7 +172,7 @@ class MainActivity : ComponentActivity() {
             val launch = packageManager.getLaunchIntentForPackage(entry.packageName)
             withContext(Dispatchers.Main) {
                 if (launch == null) {
-                    Toast.makeText(this@MainActivity, R.string.pin_shortcut_unsupported, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, R.string.pin_shortcut_unsupported, Toast.LENGTH_LONG).show()
                     return@withContext
                 }
                 launch.action = Intent.ACTION_MAIN
@@ -182,7 +182,10 @@ class MainActivity : ComponentActivity() {
                     .setIntent(launch)
                     .apply { if (bmp != null) setIcon(Icon.createWithBitmap(bmp)) }
                     .build()
-                sm.requestPinShortcut(info, null)
+                val ok = runCatching { sm.requestPinShortcut(info, null) }.getOrDefault(false)
+                if (!ok) {
+                    Toast.makeText(this@MainActivity, R.string.pin_shortcut_failed, Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
