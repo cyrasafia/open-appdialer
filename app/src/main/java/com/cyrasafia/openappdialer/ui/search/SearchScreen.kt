@@ -63,7 +63,6 @@ fun SearchScreen(
                         } else {
                             ResultPager(
                                 items = state.items.map { it.entry },
-                                totalMatches = state.totalMatches,
                                 resetKey = state.query,
                                 iconCache = iconCache,
                                 onLaunch = onLaunch,
@@ -73,7 +72,6 @@ fun SearchScreen(
 
                     is SearchUiState.Empty -> ResultPager(
                         items = state.items,
-                        totalMatches = state.items.size,
                         resetKey = "",
                         iconCache = iconCache,
                         onLaunch = onLaunch,

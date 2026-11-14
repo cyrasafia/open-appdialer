@@ -42,7 +42,6 @@ val PAGE_HEIGHT = 124.dp
 @Composable
 fun ResultPager(
     items: List<AppEntry>,
-    totalMatches: Int,
     resetKey: String,
     iconCache: AppIconCache,
     onLaunch: (AppEntry) -> Unit,
@@ -65,30 +64,16 @@ fun ResultPager(
                 .height(PAGE_HEIGHT),
         ) { page ->
             val pageItems = items.drop(page * ITEMS_PER_PAGE).take(ITEMS_PER_PAGE)
-            Box(modifier = Modifier.fillMaxSize()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.TopCenter),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    pageItems.forEach { entry ->
-                        ResultItem(
-                            entry = entry,
-                            iconCache = iconCache,
-                            onLaunch = onLaunch,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-                if (page == pageCount - 1 && totalMatches > items.size && items.isNotEmpty()) {
-                    Text(
-                        text = stringResource(R.string.more_matches_fmt, totalMatches - items.size),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 2.dp),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                pageItems.forEach { entry ->
+                    ResultItem(
+                        entry = entry,
+                        iconCache = iconCache,
+                        onLaunch = onLaunch,
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
@@ -159,7 +144,7 @@ private fun ResultItem(
                 text = entry.label,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
             )
