@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -49,6 +50,9 @@ dependencies {
 
     // F5 主题偏好存储（M3 启用）
     implementation(libs.androidx.datastore.preferences)
+
+    // F1 数据层缓存序列化（apps.json）
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
