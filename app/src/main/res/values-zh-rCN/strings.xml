@@ -21,6 +21,4 @@
     <string name="menu_app_details">查看详情</string>
     <string name="menu_uninstall">卸载</string>
     <string name="pin_shortcut_unsupported">当前启动器不支持添加快捷方式</string>
-    <string name="pin_shortcut_failed">添加失败：请在系统设置中为 Open AppDialer 授予「创建桌面快捷方式」权限后重试</string>
-    <string name="shortcut_permission_entry">桌面快捷方式权限（MIUI 需先授权）</string>
 </resources>
