@@ -2,11 +2,15 @@ package com.cyrasafia.openappdialer
 
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
+import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
 import android.widget.Toast
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -25,6 +29,7 @@ import com.cyrasafia.openappdialer.data.AppRepository
 import com.cyrasafia.openappdialer.data.AppsCache
 import com.cyrasafia.openappdialer.data.PackageEventReceiver
 import com.cyrasafia.openappdialer.data.SettingsStore
+import com.cyrasafia.openappdialer.ui.search.AppAction
 import com.cyrasafia.openappdialer.ui.search.SearchScreen
 import com.cyrasafia.openappdialer.ui.search.SearchViewModel
 import com.cyrasafia.openappdialer.ui.settings.SettingsScreen
@@ -33,6 +38,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -66,6 +72,11 @@ class MainActivity : ComponentActivity() {
 
     private var showSettings by mutableStateOf(false)
 
+    /** 长按菜单"添加桌面快捷方式"是否可用（spec v2.7：API 26+ 且启动器支持） */
+    private val canPinShortcut: Boolean
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            getSystemService(ShortcutManager::class.java)?.isRequestPinShortcutSupported == true
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -95,7 +106,9 @@ class MainActivity : ComponentActivity() {
                     SearchScreen(
                         viewModel = searchViewModel,
                         iconCache = iconCache,
+                        canPinShortcut = canPinShortcut,
                         onLaunch = ::launchApp,
+                        onAppAction = ::handleAppAction,
                         onOpenSettings = { showSettings = true },
                     )
                 }
@@ -122,6 +135,55 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, R.string.launch_failed, Toast.LENGTH_SHORT).show()
             openAppDetails(entry.packageName)
             finish()
+        }
+    }
+
+    /** 长按菜单动作（spec v2.7）：快捷方式 / 详情 / 卸载 */
+    private fun handleAppAction(entry: AppEntry, action: AppAction) {
+        when (action) {
+            AppAction.PIN_SHORTCUT -> pinShortcut(entry)
+
+            AppAction.DETAILS -> {
+                openAppDetails(entry.packageName)
+                finish()
+            }
+
+            AppAction.UNINSTALL -> {
+                runCatching {
+                    startActivity(
+                        Intent(Intent.ACTION_DELETE, Uri.fromParts("package", entry.packageName, null)),
+                    )
+                }
+                finish()
+            }
+        }
+    }
+
+    /** 添加桌面快捷方式（spec v2.7）：requestPinShortcut，图标取自内存缓存 */
+    private fun pinShortcut(entry: AppEntry) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val sm = getSystemService(ShortcutManager::class.java)
+        if (sm == null || !sm.isRequestPinShortcutSupported) {
+            Toast.makeText(this, R.string.pin_shortcut_unsupported, Toast.LENGTH_SHORT).show()
+            return
+        }
+        appScope.launch {
+            val bmp = iconCache.icon(entry.packageName)
+            val launch = packageManager.getLaunchIntentForPackage(entry.packageName)
+            withContext(Dispatchers.Main) {
+                if (launch == null) {
+                    Toast.makeText(this@MainActivity, R.string.pin_shortcut_unsupported, Toast.LENGTH_SHORT).show()
+                    return@withContext
+                }
+                launch.action = Intent.ACTION_MAIN
+                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                val info = ShortcutInfo.Builder(this@MainActivity, "app-" + entry.packageName)
+                    .setShortLabel(entry.label)
+                    .setIntent(launch)
+                    .apply { if (bmp != null) setIcon(Icon.createWithBitmap(bmp)) }
+                    .build()
+                sm.requestPinShortcut(info, null)
+            }
         }
     }
 

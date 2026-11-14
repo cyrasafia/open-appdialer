@@ -17,4 +17,8 @@
     <string name="license_label">许可证：GPL-3.0</string>
     <string name="repo_url">github.com/cyrasafia/open-appdialer</string>
     <string name="launch_failed">无法启动应用</string>
+    <string name="menu_pin_shortcut">添加桌面快捷方式</string>
+    <string name="menu_app_details">查看详情</string>
+    <string name="menu_uninstall">卸载</string>
+    <string name="pin_shortcut_unsupported">当前启动器不支持添加快捷方式</string>
 </resources>

@@ -17,4 +17,8 @@
     <string name="license_label">License: GPL-3.0</string>
     <string name="repo_url">github.com/cyrasafia/open-appdialer</string>
     <string name="launch_failed">Couldn\'t launch app</string>
+    <string name="menu_pin_shortcut">Add to Home screen</string>
+    <string name="menu_app_details">App details</string>
+    <string name="menu_uninstall">Uninstall</string>
+    <string name="pin_shortcut_unsupported">Launcher doesn\'t support pinned shortcuts</string>
 </resources>

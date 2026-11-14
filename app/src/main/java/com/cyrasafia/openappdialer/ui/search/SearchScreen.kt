@@ -34,7 +34,9 @@ private val RESULT_AREA_HEIGHT = PAGE_HEIGHT + 12.dp
 fun SearchScreen(
     viewModel: SearchViewModel,
     iconCache: AppIconCache,
+    canPinShortcut: Boolean,
     onLaunch: (AppEntry) -> Unit,
+    onAppAction: (AppEntry, AppAction) -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -67,7 +69,9 @@ fun SearchScreen(
                                 items = state.items.map { it.entry },
                                 resetKey = state.query,
                                 iconCache = iconCache,
+                                canPinShortcut = canPinShortcut,
                                 onLaunch = onLaunch,
+                                onAppAction = onAppAction,
                             )
                         }
                     }
@@ -76,7 +80,9 @@ fun SearchScreen(
                         items = state.items,
                         resetKey = "",
                         iconCache = iconCache,
+                        canPinShortcut = canPinShortcut,
                         onLaunch = onLaunch,
+                        onAppAction = onAppAction,
                     )
                 }
             }

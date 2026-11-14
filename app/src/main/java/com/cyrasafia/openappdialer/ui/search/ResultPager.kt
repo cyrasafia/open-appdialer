@@ -1,5 +1,7 @@
 package com.cyrasafia.openappdialer.ui.search
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,14 +14,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,7 +55,9 @@ fun ResultPager(
     items: List<AppEntry>,
     resetKey: String,
     iconCache: AppIconCache,
+    canPinShortcut: Boolean,
     onLaunch: (AppEntry) -> Unit,
+    onAppAction: (AppEntry, AppAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val pageCount =
@@ -76,7 +85,9 @@ fun ResultPager(
                     ResultItem(
                         entry = entry,
                         iconCache = iconCache,
+                        canPinShortcut = canPinShortcut,
                         onLaunch = onLaunch,
+                        onAppAction = onAppAction,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -108,55 +119,101 @@ fun ResultPager(
     }
 }
 
-/** 候选项（spec v2.4）：图标上、名称下（紧凑字体、单行省略），无背景色，按压缩放 */
+/** 候选项（spec v2.4/v2.7）：图标上、名称下（紧凑字体、单行省略），无背景色，按压缩放；长按弹出操作菜单 */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ResultItem(
     entry: AppEntry,
     iconCache: AppIconCache,
+    canPinShortcut: Boolean,
     onLaunch: (AppEntry) -> Unit,
+    onAppAction: (AppEntry, AppAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val bitmap by produceState(initialValue = null as android.graphics.Bitmap?, entry.packageName) {
         value = iconCache.icon(entry.packageName)
     }
     val interaction = remember { MutableInteractionSource() }
+    var menuExpanded by remember { mutableStateOf(false) }
+
     Surface(
-        onClick = { onLaunch(entry) },
-        interactionSource = interaction,
         shape = MaterialTheme.shapes.medium,
         color = Color.Transparent,
         modifier = modifier
             .pressScale(interaction)
             .height(PAGE_HEIGHT),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 2.dp, vertical = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .combinedClickable(
+                    interactionSource = interaction,
+                    indication = ripple(),
+                    onClick = { onLaunch(entry) },
+                    onLongClick = { menuExpanded = true },
+                ),
         ) {
-            val bmp = bitmap
-            if (bmp != null) {
-                androidx.compose.foundation.Image(
-                    bitmap = bmp.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.size(60.dp), // 与系统启动器图标相当（spec v2.5）
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 2.dp, vertical = 6.dp)
+                    .align(Alignment.TopCenter),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                val bmp = bitmap
+                if (bmp != null) {
+                    androidx.compose.foundation.Image(
+                        bitmap = bmp.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.size(60.dp), // 与系统启动器图标相当（spec v2.5）
+                    )
+                } else {
+                    Surface(
+                        modifier = Modifier.size(60.dp),
+                        shape = MaterialTheme.shapes.extraSmall,
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    ) {}
+                }
+                Text(
+                    text = entry.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
                 )
-            } else {
-                Surface(
-                    modifier = Modifier.size(60.dp),
-                    shape = MaterialTheme.shapes.extraSmall,
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                ) {}
             }
-            Text(
-                text = entry.label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-            )
+
+            // 长按操作菜单（spec v2.7）：快捷方式 / 详情 / 卸载
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+            ) {
+                if (canPinShortcut) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_pin_shortcut)) },
+                        onClick = {
+                            menuExpanded = false
+                            onAppAction(entry, AppAction.PIN_SHORTCUT)
+                        },
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_app_details)) },
+                    onClick = {
+                        menuExpanded = false
+                        onAppAction(entry, AppAction.DETAILS)
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_uninstall)) },
+                    onClick = {
+                        menuExpanded = false
+                        onAppAction(entry, AppAction.UNINSTALL)
+                    },
+                )
+            }
         }
     }
 }
