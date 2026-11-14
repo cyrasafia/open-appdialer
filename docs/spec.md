@@ -1,4 +1,4 @@
-# Open AppDialer 技术规格（Spec v2.8）
+# Open App Dialer 技术规格（Spec v2.9）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -255,6 +255,7 @@ data class AppEntry(
 
 ## 10. 变更记录
 
+- 2026-11-15 v2.9 HyperOS 4.0（Android 17）浅色模式启动白屏：判定为 v2.6 同族问题（系统桌面启动转场对透明窗口快照按主题色合成，深色→黑、浅色→白），主题层无剩余手段，接受遗留；模拟器复现受阻（google_apis android-37.0 r08 镜像不稳定：uiautomator/package 服务/intent 解析均异常），未做无验证的盲目改动；彻底解法仍为 backlog 的通知/快捷开关唤起
 - 2026-11-15 v2.8 回滚 MIUI 快捷方式特殊处理（设置页授权入口、失败提示、权限页直达），暂不针对 MIUI 做适配。实测结论保留：未授予系统私有"创建桌面快捷方式"权限时 `requestPinShortcut` 返回 true 且静默丢弃（AppOps 权限，无法主动请求/查询，小米官方建议引导用户手动开启），授权后功能正常；相关实现见 git 历史可随时恢复
 - 2026-11-14 v2.7 新增候选长按菜单：添加桌面快捷方式（requestPinShortcut，26+）/ 查看详情 / 卸载
 - 2026-11-14 v2.6 尝试并回滚 windowShowWallpaper（MIUI 上垫出应用图标白底）；结论：启动一帧闪烁为 MIUI 桌面自绘动效，接受遗留；overlay 唤起方案留 backlog
