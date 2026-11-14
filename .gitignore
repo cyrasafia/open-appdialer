@@ -13,6 +13,11 @@ out/
 .gradle/
 local.properties
 
+# Signing (never commit)
+keystore.properties
+*.keystore
+*.jks
+
 # Android Studio / IntelliJ
 .idea/
 *.iml

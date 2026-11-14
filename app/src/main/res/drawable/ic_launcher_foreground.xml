@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  自适应图标前景：3×3 九宫格键（108dp 画布，内容居中 62dp 安全区内）。
+  右下键带 "0" 提示（9/0 共键），左上键为空心环（清空/设置键），呼应键盘布局。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 单个圆角方块 16×16 r5，随 group 平移 -->
+    <!-- 左上（23,23）：空心环 = 功能键 -->
+    <group
+        android:translateX="23"
+        android:translateY="23">
+        <path
+            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="3"
+            android:fillColor="#00000000" />
+    </group>
+
+    <group android:translateX="46" android:translateY="23">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
+    </group>
+    <group android:translateX="69" android:translateY="23">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
+    </group>
+
+    <group android:translateX="23" android:translateY="46">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
+    </group>
+    <group android:translateX="46" android:translateY="46">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
+    </group>
+    <group android:translateX="69" android:translateY="46">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
+    </group>
+
+    <group android:translateX="23" android:translateY="69">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
+    </group>
+    <group android:translateX="46" android:translateY="69">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
+    </group>
+    <!-- 右下（69,69）：9/0 共键，加小圆点提示 0 -->
+    <group android:translateX="69" android:translateY="69">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M5,0 h6 a5,5 0 0 1 5,5 v6 a5,5 0 0 1 -5,5 h-6 a5,5 0 0 1 -5,-5 v-6 a5,5 0 0 1 5,-5 z" />
+        <path
+            android:fillColor="#4355B9"
+            android:pathData="M8,8 m-2.6,0 a2.6,2.6 0 1 1 5.2,0 a2.6,2.6 0 1 1 -5.2,0" />
+    </group>
+</vector>
