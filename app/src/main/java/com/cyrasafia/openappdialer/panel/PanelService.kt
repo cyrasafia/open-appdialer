@@ -121,7 +121,8 @@ class PanelService : LifecycleService() {
                             runCatching {
                                 startActivity(
                                     Intent(this@PanelService, MainActivity::class.java)
-                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        .putExtra(MainActivity.EXTRA_OPEN_SETTINGS, true),
                                 )
                             }
                             hidePanel()

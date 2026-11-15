@@ -139,6 +139,8 @@ class MainActivity : ComponentActivity() {
 
     private fun resolveIntent(intent: Intent?) {
         showOverlayGuide = intent?.getBooleanExtra(EXTRA_REQUEST_OVERLAY, false) ?: false
+        // overlay 长按进设置：直接落在设置页（spec v3.2）
+        showSettings = intent?.getBooleanExtra(EXTRA_OPEN_SETTINGS, false) ?: false
     }
 
     /** 入口策略（F9/F10）：已授权 overlay → 确保常驻服务（不重弹面板）；否则走应用内通知 */
@@ -249,6 +251,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_REQUEST_OVERLAY = "request_overlay"
+        const val EXTRA_OPEN_SETTINGS = "open_settings"
         private const val REQUEST_NOTIF = 1001
         private const val NOTIF_CHANNEL_ID = "search"
         private const val NOTIF_ID = 1001
