@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -50,20 +51,21 @@ fun SearchScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // 入场动画（spec v3.3）：上滑 40dp + 淡入 220ms，overlay 与 Activity 两入口共享
+    // 入场动画（spec v3.3 修订）：以底部中心为锚点从 0.6 放大至 1，模拟自 dock 位置"展开"；无淡入
     var appeared by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { appeared = true }
-    val progress by animateFloatAsState(
-        targetValue = if (appeared) 1f else 0f,
-        animationSpec = tween(durationMillis = 220, easing = LinearOutSlowInEasing),
+    val scale by animateFloatAsState(
+        targetValue = if (appeared) 1f else 0.6f,
+        animationSpec = tween(durationMillis = 240, easing = LinearOutSlowInEasing),
         label = "panelEnter",
     )
 
     Surface(
         modifier = modifier
             .graphicsLayer {
-                alpha = progress
-                translationY = (1f - progress) * 40.dp.toPx()
+                scaleX = scale
+                scaleY = scale
+                transformOrigin = TransformOrigin(0.5f, 1f)
             }
             .widthIn(max = 480.dp)
             .heightIn(max = 640.dp),
