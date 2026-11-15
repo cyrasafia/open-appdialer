@@ -8,15 +8,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cyrasafia.openappdialer.R
@@ -42,8 +50,21 @@ fun SearchScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    // 入场动画（spec v3.3）：上滑 40dp + 淡入 220ms，overlay 与 Activity 两入口共享
+    var appeared by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appeared = true }
+    val progress by animateFloatAsState(
+        targetValue = if (appeared) 1f else 0f,
+        animationSpec = tween(durationMillis = 220, easing = LinearOutSlowInEasing),
+        label = "panelEnter",
+    )
+
     Surface(
         modifier = modifier
+            .graphicsLayer {
+                alpha = progress
+                translationY = (1f - progress) * 40.dp.toPx()
+            }
             .widthIn(max = 480.dp)
             .heightIn(max = 640.dp),
         shape = MaterialTheme.shapes.extraLarge,
