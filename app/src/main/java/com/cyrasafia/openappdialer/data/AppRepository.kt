@@ -75,13 +75,19 @@ class AppRepository(
                     val indexed = LabelIndexer.index(label, pinyinSource)
                     val usage = old[pkg]
                     if (usage != null) {
-                        usage.copy(label = label, firstInstallTime = installedAt, index = indexed)
+                        usage.copy(
+                            label = label,
+                            firstInstallTime = installedAt,
+                            index = indexed,
+                            packageKeys = LabelIndexer.packageKeys(pkg),
+                        )
                     } else {
                         AppEntry(
                             packageName = pkg,
                             label = label,
                             firstInstallTime = installedAt,
                             index = indexed,
+                            packageKeys = LabelIndexer.packageKeys(pkg),
                         )
                     }
                 }
@@ -129,6 +135,7 @@ class AppRepository(
                 launchCount = old?.launchCount ?: 0,
                 lastLaunchAt = old?.lastLaunchAt ?: 0L,
                 index = LabelIndexer.index(label, pinyinSource),
+                packageKeys = LabelIndexer.packageKeys(pkg),
             )
             _apps.value = _apps.value.filterNot { it.packageName == pkg } + entry
             persist()

@@ -17,4 +17,6 @@ data class AppEntry(
     /** 最近一次从本应用启动的时间 epoch ms；0 = 从未使用 */
     val lastLaunchAt: Long = 0L,
     val index: LabelIndex = LabelIndex.EMPTY,
+    /** 包名键串（spec v3.5 L4 包名段匹配） */
+    val packageKeys: String = "",
 )

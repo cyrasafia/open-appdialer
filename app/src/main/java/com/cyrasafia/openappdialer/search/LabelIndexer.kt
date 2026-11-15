@@ -1,8 +1,10 @@
 package com.cyrasafia.openappdialer.search
 
 /**
- * label → LabelIndex（spec F2 序列生成）。
- * 归一化 → 解析为单元（字母数字串/汉字/特殊字符）→ 生成键串变体（全拼/首字母 × 多音字 × 分隔符两种处理）。
+ * label → LabelIndex（spec F2 序列生成，v3.5 语义）。
+ * - 全拼：拉丁串整串 + 汉字完整读音
+ * - 首字母：拉丁串逐词首字符（驼峰/数字边界分词）+ 汉字逐字首字母
+ * - 包名键串：包名全部字母数字的键映射（供 L4 包名段匹配）
  */
 object LabelIndexer {
 
@@ -24,7 +26,17 @@ object LabelIndexer {
         return LabelIndex(variants = variants, units = folded)
     }
 
-    // ---- 解析 ----
+    /** 包名键串（spec v3.5 L4）：全部字母数字的键映射，分隔符忽略 */
+    fun packageKeys(pkg: String): String = buildString {
+        for (c in pkg) {
+            when {
+                c.isDigit() -> append(KeyMap.keyOfDigit(c))
+                c.lowercaseChar() in 'a'..'z' -> append(KeyMap.keyOfLetter(c.lowercaseChar()) ?: '9')
+            }
+        }
+    }
+
+    // ---- 解析（在原始大小写上分词，键映射用小写） ----
 
     private fun parseUnits(
         label: String,
@@ -32,28 +44,28 @@ object LabelIndexer {
         foldSeparators: Boolean,
     ): List<LabelIndex.SearchUnit> {
         val units = ArrayList<LabelIndex.SearchUnit>()
-        val run = StringBuilder()
+        val runChars = StringBuilder() // 原始大小写，用于分词
 
         fun flushRun() {
-            if (run.isNotEmpty()) {
-                units += runUnit(run.toString())
-                run.clear()
+            if (runChars.isNotEmpty()) {
+                units += runUnit(runChars.toString())
+                runChars.clear()
             }
         }
 
-        for (c in label.lowercase()) {
+        for (c in label) {
             when {
                 isChinese(c) -> {
                     flushRun()
                     val readings = source.readings(c)
                     if (readings.isEmpty()) {
-                        units += SYMBOL_UNIT // 有读音数据的 CJK 之外（生僻字等）按特殊字符处理
+                        units += SYMBOL_UNIT // 无读音的生僻 CJK 按特殊字符处理
                     } else {
                         units += LabelIndex.SearchUnit(kind = KIND_CHINESE, readings = readings)
                     }
                 }
 
-                isRunChar(c) -> run.append(c)
+                isRunChar(c) -> runChars.append(c)
 
                 else -> {
                     flushRun()
@@ -68,21 +80,42 @@ object LabelIndexer {
     private fun isChinese(c: Char): Boolean =
         c in '\u4E00'..'\u9FFF' || c in '\u3400'..'\u4DBF'
 
-    /** 参与字母数字串的字符：a-z（含 ü→v 归一）与数字 */
+    /** 参与字母数字串的字符（保留原始大小写用于驼峰分词） */
     private fun isRunChar(c: Char): Boolean =
-        c in 'a'..'z' || c == 'ü' || c in '0'..'9'
+        c in 'a'..'z' || c in 'A'..'Z' || c in '0'..'9' || c == 'ü' || c == 'Ü'
 
+    /** 字母数字串单元：keyString=整串键（全拼），initialKeys=逐词首字符键（首字母，v3.5） */
     private fun runUnit(run: String): LabelIndex.SearchUnit {
-        val keys = buildString {
-            for (c in run) {
-                when {
-                    c == 'ü' -> append('8') // v → 键 8
-                    c.isDigit() -> append(KeyMap.keyOfDigit(c))
-                    else -> append(KeyMap.keyOfLetter(c) ?: '9')
-                }
+        val keys = StringBuilder()
+        val initialKeys = StringBuilder()
+        var lastWasLowerLetter = false
+        var lastWasDigit = false
+        var wordStarted = true
+
+        for (c in run) {
+            val lc = c.lowercaseChar()
+            val key = when {
+                c.isDigit() -> KeyMap.keyOfDigit(c)
+                lc == 'ü' -> '8'
+                else -> KeyMap.keyOfLetter(lc) ?: '9'
             }
+            keys.append(key)
+
+            // 分词边界：串首、大写字母跟在小写后（驼峰）、数字与字母交界
+            val isUpperLetter = c in 'A'..'Z'
+            val isLetter = c in 'a'..'z' || c in 'A'..'Z' || c == 'ü' || c == 'Ü'
+            val isDigit = c.isDigit()
+            val boundary = (isUpperLetter && lastWasLowerLetter) ||
+                (isLetter && lastWasDigit) ||
+                (isDigit && !lastWasDigit)
+            if (wordStarted || boundary) {
+                initialKeys.append(key)
+                wordStarted = false
+            }
+            lastWasLowerLetter = c in 'a'..'z'
+            lastWasDigit = isDigit
         }
-        return LabelIndex.SearchUnit(kind = KIND_RUN, keyString = keys)
+        return LabelIndex.SearchUnit(kind = KIND_RUN, keyString = keys.toString(), initialKeys = initialKeys.toString())
     }
 
     // ---- 变体生成 ----
@@ -91,7 +124,9 @@ object LabelIndexer {
         var states = listOf("" to "") // (full, initials)
         for (u in units) {
             states = when (u.kind) {
-                KIND_RUN -> states.map { (f, i) -> f + u.keyString to i + u.keyString }
+                KIND_RUN -> states.map { (f, i) ->
+                    f + u.keyString to i + u.initialKeys
+                }
 
                 KIND_CHINESE -> {
                     val next = ArrayList<Pair<String, String>>(states.size * u.readings.size)
@@ -103,9 +138,9 @@ object LabelIndexer {
                     next
                 }
 
-                else -> states.map { (f, i) -> f + "9" to i + "9" }
+                else -> states.map { (f, i) -> f + "9" to i } // 特殊字符计入全拼、不计入首字母
             }
-            if (states.size > MAX_VARIANTS) states = states.take(MAX_VARIANTS)
+            if (states.size > MAX_VARIANTS) states = states.take(MAX_VARIANTS) // 常见读音组合在前
         }
         return states.map { (f, i) -> LabelIndex.KeyVariant(full = f, initials = i) }.distinct()
     }

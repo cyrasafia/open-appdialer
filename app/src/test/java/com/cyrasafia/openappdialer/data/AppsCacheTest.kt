@@ -30,6 +30,7 @@ class AppsCacheTest {
         launchCount = count,
         lastLaunchAt = last,
         index = LabelIndexer.index(label, pinyin),
+        packageKeys = LabelIndexer.packageKeys(pkg),
     )
 
     @Test

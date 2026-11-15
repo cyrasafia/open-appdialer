@@ -1,10 +1,12 @@
 package com.cyrasafia.openappdialer.search
 
 /**
- * 匹配结果（spec F2 匹配规则，v3.4 起首字母优先）：
- * - level：L1=1 首字母前缀/全文 < L2=2 全拼前缀/全文 < L3=3 混合前缀 < L4=4 子串
- * - exact：查询与某序列完整相等
- * - position：匹配起始位置（L1/L2/L4 为键串下标；L3 为起始单元下标）
+ * 匹配结果（spec F2 匹配规则，v3.5）：
+ * - L1=1 名称首字母（中文逐字首字母 + 英文逐词首字母）
+ * - L2=2 名称全拼
+ * - L3=3 混合输入前缀
+ * - L4=4 包名
+ * 每段内部：exact 完全匹配 > 前缀(position=0) > 子串(position>0)
  */
 data class MatchResult(val level: Int, val exact: Boolean, val position: Int) {
     companion object {
@@ -18,10 +20,10 @@ data class MatchResult(val level: Int, val exact: Boolean, val position: Int) {
 object T9Matcher {
 
     /**
-     * 查询 Q 对单个应用索引的匹配。
+     * 查询 Q 对单个应用的匹配（spec v3.5：名称首字母 > 全拼 > 混合 > 包名，段内 完全>前缀>子串）。
      * @param query 非空，且仅含 '2'..'9'（键盘只产生这些字符）
      */
-    fun match(query: String, index: LabelIndex): MatchResult? {
+    fun match(query: String, index: LabelIndex, packageKeys: String = ""): MatchResult? {
         require(query.isNotEmpty()) { "query must not be empty" }
         if (query.any { !KeyMap.isQueryKey(it) }) return null
 
@@ -32,28 +34,27 @@ object T9Matcher {
             if (cur == null || compare(candidate, cur) < 0) best = candidate
         }
 
+        // 段内通用：完全 > 前缀 > 子串
+        fun considerString(keys: String, level: Int) {
+            when {
+                keys == query -> consider(MatchResult(level, exact = true, position = 0))
+                keys.startsWith(query) -> consider(MatchResult(level, exact = false, position = 0))
+                else -> keys.indexOf(query).takeIf { it >= 0 }?.let {
+                    consider(MatchResult(level, exact = false, position = it))
+                }
+            }
+        }
+
         for (v in index.variants) {
-            if (v.initials == query) {
-                consider(MatchResult(MatchResult.L1, exact = true, position = 0))
-            } else if (v.initials.startsWith(query)) {
-                consider(MatchResult(MatchResult.L1, exact = false, position = 0))
-            }
-            if (v.full == query) {
-                consider(MatchResult(MatchResult.L2, exact = true, position = 0))
-            } else if (v.full.startsWith(query)) {
-                consider(MatchResult(MatchResult.L2, exact = false, position = 0))
-            }
-            v.full.indexOf(query).takeIf { it >= 0 }?.let {
-                consider(MatchResult(MatchResult.L4, exact = false, position = it))
-            }
-            v.initials.indexOf(query).takeIf { it >= 0 }?.let {
-                consider(MatchResult(MatchResult.L4, exact = false, position = it))
-            }
+            considerString(v.initials, MatchResult.L1)
+            considerString(v.full, MatchResult.L2)
         }
 
         matchL3(query, index.units)?.let { start ->
             consider(MatchResult(MatchResult.L3, exact = false, position = start))
         }
+
+        if (packageKeys.isNotEmpty()) considerString(packageKeys, MatchResult.L4)
 
         return best
     }

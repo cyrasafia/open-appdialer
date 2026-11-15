@@ -14,7 +14,7 @@ object SearchEngine {
         if (query.isEmpty()) return emptyList()
         return entries.asSequence()
             .mapNotNull { entry ->
-                T9Matcher.match(query, entry.index)?.let { MatchedApp(entry, it) }
+                T9Matcher.match(query, entry.index, entry.packageKeys)?.let { MatchedApp(entry, it) }
             }
             .sortedWith(
                 compareBy<MatchedApp> { it.match.level }

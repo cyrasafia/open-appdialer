@@ -66,51 +66,50 @@ class T9MatcherTest {
         assertEquals(MatchResult.L3, m.level)
     }
 
-    // ---- 1DM+：1→键2、+→键9；序列 2369（折叠）/ 236（删除分隔符）。
-    // 纯字母数字名 full==initials，按新规则归入更优的 L1 ----
+    // ---- 1DM+：1→键2、+→键9；全拼序列 2369/236（v3.5 首字母=逐词首字符 "23"） ----
 
     @Test
-    fun `1dm L1 exact`() {
+    fun `1dm full L2 exact`() {
         val m = T9Matcher.match("2369", idx("1DM+"))!!
-        assertEquals(MatchResult.L1, m.level)
+        assertEquals(MatchResult.L2, m.level)
         assertEquals(true, m.exact)
     }
 
     @Test
-    fun `1dm dropped-separator variant prefix L1`() {
+    fun `1dm dropped-separator variant prefix L2`() {
         val m = T9Matcher.match("236", idx("1DM+"))!!
-        assertEquals(MatchResult.L1, m.level)
+        assertEquals(MatchResult.L2, m.level)
     }
 
     @Test
-    fun `1dm substring L4`() {
+    fun `1dm substring in L2`() {
         val m = T9Matcher.match("369", idx("1DM+"))!!
-        assertEquals(MatchResult.L4, m.level)
+        assertEquals(MatchResult.L2, m.level) // 子串在段内（v3.5）
         assertEquals(1, m.position)
     }
 
     // ---- 12306：序列 22396（纯数字名 full==initials → L1） ----
 
     @Test
-    fun `12306 L1 exact`() {
+    fun `12306 full L2 exact`() {
         val m = T9Matcher.match("22396", idx("12306"))!!
-        assertEquals(MatchResult.L1, m.level)
+        assertEquals(MatchResult.L2, m.level)
         assertEquals(true, m.exact)
     }
 
     @Test
-    fun `12306 skip leading 1 substring L4`() {
+    fun `12306 skip leading 1 substring L2`() {
         val m = T9Matcher.match("2396", idx("12306"))!!
-        assertEquals(MatchResult.L4, m.level)
+        assertEquals(MatchResult.L2, m.level)
         assertEquals(1, m.position)
     }
 
     // ---- Chrome：子串 rom = 766 ----
 
     @Test
-    fun `chrome substring L4`() {
+    fun `chrome substring L2`() {
         val m = T9Matcher.match("766", idx("Chrome"))!!
-        assertEquals(MatchResult.L4, m.level)
+        assertEquals(MatchResult.L2, m.level)
         assertEquals(2, m.position)
     }
 
@@ -131,9 +130,9 @@ class T9MatcherTest {
     // ---- Gmail = 46245（纯字母名 full==initials → L1） ----
 
     @Test
-    fun `gmail L1`() {
+    fun `gmail full L2`() {
         val m = T9Matcher.match("46245", idx("Gmail"))!!
-        assertEquals(MatchResult.L1, m.level)
+        assertEquals(MatchResult.L2, m.level)
     }
 
     // ---- 9 键同时命中 W/X/Y/Z、含 0、含特殊字符的应用（spec 7.1） ----
@@ -153,6 +152,40 @@ class T9MatcherTest {
         // 用真实 fixture：query "93" 命中 微信 全拼前缀(L2)；命中 微信 initials 前缀(L1)
         val m = T9Matcher.match("9", idx("微信"))!!
         assertEquals(MatchResult.L1, m.level) // 9 是 initials "99" 的前缀 → L1 优先于全拼前缀
+    }
+
+    // ---- v3.5 排序语义：名称首字母 > 全拼 > 混合 > 包名（用户示例锁定） ----
+
+    @Test
+    fun `user example 92 xiangce xclx wanderboat`() {
+        // 相册(xc) 首字母完全 → 携程旅行(xclx) 首字母前缀 → wanderboat 全拼前缀
+        val xc = T9Matcher.match("92", idx("相册"))!!
+        assertEquals(MatchResult.L1, xc.level)
+        assertEquals(true, xc.exact)
+        val xclx = T9Matcher.match("92", idx("携程旅行"))!!
+        assertEquals(MatchResult.L1, xclx.level)
+        assertEquals(false, xclx.exact)
+        assertEquals(MatchResult.L2, T9Matcher.match("92", idx("wanderboat"))!!.level)
+    }
+
+    @Test
+    fun `english word initials ob matches Open builder`() {
+        val m = T9Matcher.match("62", idx("Open builder"))!!
+        assertEquals(MatchResult.L1, m.level) // o + b 逐词首字母
+        assertEquals(true, m.exact)
+    }
+
+    @Test
+    fun `package name tier L4`() {
+        // label 不含相关音，仅包名命中
+        val label = idx("张三")
+        val pkgKeys = LabelIndexer.packageKeys("com.example.app")
+        val m = T9Matcher.match("266", label, pkgKeys)!! // "com" 前缀
+        assertEquals(MatchResult.L4, m.level)
+        assertEquals(false, m.exact)
+        assertEquals(0, m.position)
+        // 无包名时不命中
+        assertNull(T9Matcher.match("266", label))
     }
 
     // ---- 边界 ----

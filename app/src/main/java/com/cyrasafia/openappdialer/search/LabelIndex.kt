@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class LabelIndex(
-    /** (全拼, 首字母) 键串变体：多音字乘积（封顶）× 分隔符折叠/删除两种处理 */
+    /** (全拼, 首字母) 键串变体：多音字乘积（封顶）× 分隔符折叠/删除两种处理。首字母含中文逐字首字母与英文逐词首字母（v3.5） */
     val variants: List<KeyVariant> = emptyList(),
     /** 分隔符折叠为键 9 后的单元序列，供 L3 混合输入 DP 匹配 */
     val units: List<SearchUnit> = emptyList(),
@@ -19,7 +19,8 @@ data class LabelIndex(
     @Serializable
     data class SearchUnit(
         val kind: Int, // 0=字母数字串, 1=汉字, 2=特殊字符(键 9)
-        val keyString: String = "", // kind 0：整串字符映射后的键串
+        val keyString: String = "", // kind 0：整串字符映射后的键串（全拼贡献）
+        val initialKeys: String = "", // kind 0：逐词首字符键串（首字母贡献，v3.5）
         val readings: List<String> = emptyList(), // kind 1：归一化后的全部读音（常见读音在前）
     )
 

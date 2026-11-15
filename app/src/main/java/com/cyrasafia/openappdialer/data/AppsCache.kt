@@ -25,7 +25,8 @@ data class CachedApp(
     val t: Long = 0L, // lastLaunchAt
     val vf: String = "", // variants：全拼键串，'\u0001' 分隔
     val vi: String = "", // variants：首字母键串，'\u0001' 分隔（与 vf 一一对应）
-    val u: String = "", // units：'\u0001' 分隔（r=键串 / c=逗号分隔读音 / s=特殊字符）
+    val u: String = "", // units：'\u0001' 分隔（r=键串,逗号首字母键串 / c=逗号分隔读音 / s=特殊字符）
+    val k: String = "", // packageKeys（v3.5）
 )
 
 @Serializable
@@ -44,7 +45,7 @@ object IndexCodec {
         val vi = index.variants.joinToString(SEP.toString()) { it.initials }
         val u = index.units.joinToString(SEP.toString()) { unit ->
             when (unit.kind) {
-                0 -> "r" + unit.keyString
+                0 -> "r" + unit.keyString + "," + unit.initialKeys
                 1 -> "c" + unit.readings.joinToString(",")
                 else -> "s"
             }
@@ -58,7 +59,14 @@ object IndexCodec {
         val variants = fulls.zip(initials) { f, i -> LabelIndex.KeyVariant(f, i) }
         val units = u.split(SEP).mapNotNull { s ->
             when (s.firstOrNull()) {
-                'r' -> LabelIndex.SearchUnit(kind = 0, keyString = s.substring(1))
+                'r' -> s.substring(1).split(',', limit = 2).let {
+                    LabelIndex.SearchUnit(
+                        kind = 0,
+                        keyString = it.getOrElse(0) { "" },
+                        initialKeys = it.getOrElse(1) { "" },
+                    )
+                }
+
                 'c' -> LabelIndex.SearchUnit(
                     kind = 1,
                     readings = s.substring(1).split(',').filter { it.isNotEmpty() },
@@ -104,16 +112,20 @@ class AppsCache(private val file: File) {
         launchCount = c,
         lastLaunchAt = t,
         index = IndexCodec.decode(vf, vi, u),
+        packageKeys = k,
     )
 
     private fun AppEntry.toCached(): CachedApp {
         val (vf, vi, u) = IndexCodec.encode(index)
-        return CachedApp(p = packageName, l = label, i = firstInstallTime, c = launchCount, t = lastLaunchAt, vf = vf, vi = vi, u = u)
+        return CachedApp(
+            p = packageName, l = label, i = firstInstallTime, c = launchCount, t = lastLaunchAt,
+            vf = vf, vi = vi, u = u, k = packageKeys,
+        )
     }
 
     companion object {
-        /** v3：索引压缩序列化（v2 为完整 JSON 结构，体积大、主线程解析慢） */
-        const val SCHEMA_VERSION = 3
+        /** v4：首字母含英文逐词首字符、新增 packageKeys（spec v3.5） */
+        const val SCHEMA_VERSION = 4
         const val FILE_NAME = "apps.json"
     }
 }
