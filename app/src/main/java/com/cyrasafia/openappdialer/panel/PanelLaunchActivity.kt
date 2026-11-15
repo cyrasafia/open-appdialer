@@ -14,6 +14,7 @@ class PanelLaunchActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        android.util.Log.i("OAD/Trampoline", "launch, overlay=${Settings.canDrawOverlays(this)}")
         if (Settings.canDrawOverlays(this)) {
             PanelService.start(this)
         } else {
@@ -25,4 +26,5 @@ class PanelLaunchActivity : Activity() {
         }
         finish() // NoDisplay 必须立即结束
     }
+
 }

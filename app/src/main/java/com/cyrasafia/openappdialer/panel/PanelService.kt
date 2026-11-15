@@ -9,6 +9,7 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.WindowManager
@@ -44,15 +45,19 @@ class PanelService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
-        owner.performRestore(null)
-        owner.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-        startForeground(NOTIF_ID, buildNotification())
+        Log.i(TAG, "service onCreate")
+        runCatching {
+            owner.performRestore(null)
+            owner.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+            startForeground(NOTIF_ID, buildNotification())
+        }.onFailure { Log.e(TAG, "onCreate failed", it) }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
+        Log.i(TAG, "onStartCommand action=${intent?.action} overlay=${Settings.canDrawOverlays(this)}")
         if (intent?.action == ACTION_SHOW && Settings.canDrawOverlays(this)) {
-            showPanel()
+            runCatching { showPanel() }.onFailure { Log.e(TAG, "showPanel failed", it) }
         }
         return START_STICKY // 常驻（spec v3.1 用户决策）
     }
@@ -82,6 +87,10 @@ class PanelService : LifecycleService() {
                 }
                 return super.dispatchTouchEvent(event)
             }
+        }.apply {
+            // ViewTree owners 必须设在窗口根视图上：WindowRecomposer 在 rootView 上查找（本 bug 实测修复）
+            setViewTreeLifecycleOwner(owner)
+            setViewTreeSavedStateRegistryOwner(owner)
         }
 
         val compose = ComposeView(this).apply {
@@ -175,6 +184,7 @@ class PanelService : LifecycleService() {
 
     companion object {
         const val ACTION_SHOW = "com.cyrasafia.openappdialer.panel.SHOW"
+        private const val TAG = "OAD/PanelService"
 
         @JvmStatic
         fun start(context: android.content.Context) {

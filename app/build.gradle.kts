@@ -56,23 +56,24 @@ android {
     }
 }
 
-// AGP 9 已移除 outputFileName API：打包后自动重命名产物（应用名-v版本号，debug 追加 -debug）
+// AGP 9 已移除 outputFileName API：打包后复制出命名产物（应用名-v版本号，debug 追加 -debug）。
+// 必须"复制"而非"重命名"——移走规范输出会破坏 AGP 增量打包，产出残缺 APK（实测）。
 listOf("release" to "", "debug" to "-debug").forEach { (buildType, suffix) ->
     val cap = buildType.replaceFirstChar { it.uppercase() }
-    val renameTask = tasks.register("rename${cap}Apk") {
+    val exportTask = tasks.register("export${cap}Apk") {
         group = "build"
         doLast {
             val dir = layout.buildDirectory.dir("outputs/apk/$buildType").get().asFile
-            val src = dir.resolve("app-$buildType.apk")
-            val ver = android.defaultConfig.versionName ?: "0.0.0"
-            val dst = dir.resolve("OpenAppDialer-v$ver$suffix.apk")
+            val src = File(dir, "app-$buildType.apk")
             if (src.exists()) {
-                src.renameTo(dst)
-                logger.lifecycle("APK renamed -> ${dst.name}")
+                val ver = android.defaultConfig.versionName ?: "0.0.0"
+                val dst = File(dir, "OpenAppDialer-v$ver$suffix.apk")
+                src.copyTo(dst, overwrite = true)
+                logger.lifecycle("exported -> ${dst.name}")
             }
         }
     }
-    tasks.matching { it.name == "package$cap" }.configureEach { finalizedBy(renameTask) }
+    tasks.matching { it.name == "assemble$cap" }.configureEach { finalizedBy(exportTask) }
 }
 
 kotlin {
