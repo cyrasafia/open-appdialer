@@ -3,7 +3,10 @@ package com.cyrasafia.openappdialer.panel
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -43,6 +46,15 @@ class PanelService : LifecycleService() {
     private val owner = ServiceLifecycleOwner()
     private var panelView: FrameLayout? = null
 
+    /** 切任务/后台任务管理/息屏时自动收起面板（spec v3.6：Home 与最近任务触发系统广播，聊天气泡同款机制） */
+    private val systemEventsReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_CLOSE_SYSTEM_DIALOGS, Intent.ACTION_SCREEN_OFF -> hidePanel()
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         Log.i(TAG, "service onCreate")
@@ -51,6 +63,15 @@ class PanelService : LifecycleService() {
             owner.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
             startForeground(NOTIF_ID, buildNotification())
         }.onFailure { Log.e(TAG, "onCreate failed", it) }
+        ContextCompat.registerReceiver(
+            this,
+            systemEventsReceiver,
+            IntentFilter().apply {
+                addAction(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
+                addAction(Intent.ACTION_SCREEN_OFF)
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -180,6 +201,7 @@ class PanelService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        runCatching { unregisterReceiver(systemEventsReceiver) }
         hidePanel()
         owner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         super.onDestroy()

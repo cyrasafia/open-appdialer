@@ -1,4 +1,4 @@
-# Open AppDialer 技术规格（Spec v3.5）
+# Open AppDialer 技术规格（Spec v3.6）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -170,6 +170,7 @@
   - 点面板外区域关闭（`FLAG_WATCH_OUTSIDE_TOUCH`）；启动应用后收起面板、常驻服务保留
   - 面板期间需要窗口焦点接收触摸（keypad 自绘无 IME，无输入法冲突）
 - **每次唤起重置会话**（v3.2）：清空输入、恢复空态默认列表（常驻 Service 的 ViewModel 不跨开关保留状态）
+- **上下文离开自动收起**（v3.6）：监听 `ACTION_CLOSE_SYSTEM_DIALOGS`（Home/最近任务触发）与 `ACTION_SCREEN_OFF`，切任务、后台任务管理、息屏时面板收起（服务常驻保留）
 - **入场动画**（v3.3 修订）：以底部中心为锚点从 0.6 放大至 1（240ms、LinearOutSlowInEasing），模拟自 dock 位置"展开"；无淡入；overlay 与 Activity 两入口共享；关闭保持瞬时（退出动画为可选后续项）
 - **常驻（FGS）**：`specialUse` 类型（subtype=floating-app-launcher-panel），`START_STICKY`；FGS 常驻通知即 F9 的唤起通知（同 id 复用，点击弹面板）——进程温热，dock 点击即时出面板
 - **权限增量**：`SYSTEM_ALERT_WINDOW`（特殊权限，设置页授权一次，无法运行时弹窗）；`FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE`（安装时权限）
@@ -279,6 +280,8 @@ data class AppEntry(
 | Q9 | "新安装"阈值？ | 已定：≤ 2 小时（服务"刚装好-来找"场景），代码常量可调（v1.3） |
 
 ## 10. 变更记录
+
+- 2026-11-15 v3.6 切任务/后台任务管理/息屏时自动收起面板（ACTION_CLOSE_SYSTEM_DIALOGS + ACTION_SCREEN_OFF，零权限）
 
 - 2026-11-15 v3.5 匹配语义升级：层级改为 名称首字母 > 全拼 > 混合 > 包名，段内 完全>前缀>子串；英文按词取首字母（驼峰/数字边界分词，ob→Open builder）；新增包名段匹配（packageKeys，apps.json schema v4）；用户示例锁定测试（92：相册>携程旅行>wanderboat）
 - 2026-11-15 v3.4 排序调整：首字母（简拼）L1 优先于全拼 L2（贴合短查询意图），匹配引擎与测试同步
