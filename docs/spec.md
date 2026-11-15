@@ -169,6 +169,7 @@
   - 复用 SearchScreen 全部交互（搜索/启动/长按菜单）；面板底部对齐（与 F8 一致的 16dp 边距）
   - 点面板外区域关闭（`FLAG_WATCH_OUTSIDE_TOUCH`）；启动应用后收起面板、常驻服务保留
   - 面板期间需要窗口焦点接收触摸（keypad 自绘无 IME，无输入法冲突）
+- **每次唤起重置会话**（v3.2）：清空输入、恢复空态默认列表（常驻 Service 的 ViewModel 不跨开关保留状态）
 - **常驻（FGS）**：`specialUse` 类型（subtype=floating-app-launcher-panel），`START_STICKY`；FGS 常驻通知即 F9 的唤起通知（同 id 复用，点击弹面板）——进程温热，dock 点击即时出面板
 - **权限增量**：`SYSTEM_ALERT_WINDOW`（特殊权限，设置页授权一次，无法运行时弹窗）；`FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE`（安装时权限）
 - 降级链：未授权 overlay → dock 点击进授权引导；拒绝常驻（划掉 FGS 通知）→ 下次 dock 点击仍走跳板冷启动 Service（无闪屏，仅 ~0.3-0.8s 延迟）
@@ -278,6 +279,7 @@ data class AppEntry(
 
 ## 10. 变更记录
 
+- 2026-11-15 v3.2 修复：MainActivity 打开时服务误重弹面板（长按 1"闪一下"且设置被盖住的根因），拆分 ACTION_SHOW/ACTION_ENSURE；overlay 每次唤起重置会话（清空输入回空态）
 - 2026-11-15 v3.1 新增 F10 dock 直达：NoDisplay 跳板 + PanelService overlay + FGS 常驻（常驻通知复用为唤起入口）；SYSTEM_ALERT_WINDOW 特殊权限 + specialUse FGS；dock 点击理论上零闪屏（无 starting window）
 - 2026-11-15 v3.0 新增 F9 通知唤起（方案一）：常驻 LOW 通知 → PendingIntent 拉起浮窗，不走桌面转场（规避启动闪烁）；POST_NOTIFICATIONS 成为唯一运行时权限（可拒绝）；无 Service/无 overlay 授权
 - 2026-11-15 v2.10 根因定论（官方文档互证）：启动闪烁 = 启动转场素材缺失的系统兜底——Google《Splash screens》要求 splash 背景为不透明单色（透明属未定义行为，各版本/OEM 兜底色不同：深色→黑、HyperOS 4 浅色→白）；AOSP《Task snapshots》：桌面打开动画以 TaskSnapshotSurface/splash 为素材，半透明任务两者皆无效，SurfaceFlinger 以纯色填充。结构性矛盾，应用侧不可修，彻底解法仍是通知唤起（backlog）

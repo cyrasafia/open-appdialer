@@ -141,10 +141,10 @@ class MainActivity : ComponentActivity() {
         showOverlayGuide = intent?.getBooleanExtra(EXTRA_REQUEST_OVERLAY, false) ?: false
     }
 
-    /** 入口策略（F9/F10）：已授权 overlay → 启动常驻面板（FGS 通知即唤起入口）；否则走应用内通知 */
+    /** 入口策略（F9/F10）：已授权 overlay → 确保常驻服务（不重弹面板）；否则走应用内通知 */
     private fun setupEntry() {
         if (Settings.canDrawOverlays(this)) {
-            PanelService.start(this)
+            PanelService.start(this, show = false)
             return // FGS 常驻通知即唤起入口，不再自建通知
         }
         if (showOverlayGuide) {
@@ -235,9 +235,9 @@ class MainActivity : ComponentActivity() {
         )
         app.repository.ensureLoaded() // resume 兜底（spec F1：防漏广播）
 
-        // 从授权页返回：已授权则立即切换到常驻面板并关闭浮窗
+        // 从授权页返回：已授权则确保常驻（不弹面板，避免覆盖当前界面）
         if (Settings.canDrawOverlays(this)) {
-            PanelService.start(this)
+            PanelService.start(this, show = false)
             if (showOverlayGuide) finish()
         }
     }

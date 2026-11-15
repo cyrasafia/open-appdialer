@@ -73,6 +73,12 @@ class SearchViewModel(private val repository: AppRepository) : ViewModel() {
         cleared.value = true
     }
 
+    /** 面板每次唤起重置为全新会话（spec v3.2）：清空输入、恢复空态默认列表 */
+    fun resetSession() {
+        query.value = ""
+        cleared.value = false
+    }
+
     /** 点击候选启动前调用（spec v2.5）：冻结列表防止跳位 */
     fun onLaunching() {
         frozen.value = true

@@ -56,6 +56,7 @@ class PanelService : LifecycleService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         Log.i(TAG, "onStartCommand action=${intent?.action} overlay=${Settings.canDrawOverlays(this)}")
+        // 仅 ACTION_SHOW 弹面板；ACTION_ENSURE 只确保常驻（MainActivity 打开时不得重弹面板，spec F10）
         if (intent?.action == ACTION_SHOW && Settings.canDrawOverlays(this)) {
             runCatching { showPanel() }.onFailure { Log.e(TAG, "showPanel failed", it) }
         }
@@ -64,6 +65,7 @@ class PanelService : LifecycleService() {
 
     private fun showPanel() {
         if (panelView != null) return
+        searchViewModel.resetSession() // 每次唤起均为全新会话（spec v3.2）
         val wm = getSystemService(WindowManager::class.java) ?: return
 
         val density = resources.displayMetrics.density
@@ -184,13 +186,15 @@ class PanelService : LifecycleService() {
 
     companion object {
         const val ACTION_SHOW = "com.cyrasafia.openappdialer.panel.SHOW"
+        const val ACTION_ENSURE = "com.cyrasafia.openappdialer.panel.ENSURE"
         private const val TAG = "OAD/PanelService"
 
+        /** @param show true=弹面板（dock/通知点击）；false=仅确保常驻（MainActivity 打开时） */
         @JvmStatic
-        fun start(context: android.content.Context) {
+        fun start(context: android.content.Context, show: Boolean = true) {
             ContextCompat.startForegroundService(
                 context,
-                Intent(context, PanelService::class.java).setAction(ACTION_SHOW),
+                Intent(context, PanelService::class.java).setAction(if (show) ACTION_SHOW else ACTION_ENSURE),
             )
         }
 
