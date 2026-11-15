@@ -1,8 +1,8 @@
 package com.cyrasafia.openappdialer.search
 
 /**
- * 匹配结果（spec F2 匹配规则）：
- * - level：L1=1 全拼前缀/全文 < L2=2 首字母前缀/全文 < L3=3 混合前缀 < L4=4 子串
+ * 匹配结果（spec F2 匹配规则，v3.4 起首字母优先）：
+ * - level：L1=1 首字母前缀/全文 < L2=2 全拼前缀/全文 < L3=3 混合前缀 < L4=4 子串
  * - exact：查询与某序列完整相等
  * - position：匹配起始位置（L1/L2/L4 为键串下标；L3 为起始单元下标）
  */
@@ -33,14 +33,14 @@ object T9Matcher {
         }
 
         for (v in index.variants) {
-            if (v.full == query) {
+            if (v.initials == query) {
                 consider(MatchResult(MatchResult.L1, exact = true, position = 0))
-            } else if (v.full.startsWith(query)) {
+            } else if (v.initials.startsWith(query)) {
                 consider(MatchResult(MatchResult.L1, exact = false, position = 0))
             }
-            if (v.initials == query) {
+            if (v.full == query) {
                 consider(MatchResult(MatchResult.L2, exact = true, position = 0))
-            } else if (v.initials.startsWith(query)) {
+            } else if (v.full.startsWith(query)) {
                 consider(MatchResult(MatchResult.L2, exact = false, position = 0))
             }
             v.full.indexOf(query).takeIf { it >= 0 }?.let {

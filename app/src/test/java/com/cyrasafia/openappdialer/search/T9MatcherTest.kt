@@ -5,49 +5,52 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** spec 7.1 匹配引擎表驱动单测（真实拼音源 = vendored TinyPinyin + 多音字表） */
+/**
+ * spec 7.1 匹配引擎表驱动单测（真实拼音源 = vendored TinyPinyin + 多音字表）。
+ * v3.4 起层级：L1=首字母、L2=全拼、L3=混合、L4=子串。
+ */
 class T9MatcherTest {
 
     private val pinyin = DefaultPinyinSource()
 
     private fun idx(label: String) = LabelIndexer.index(label, pinyin)
 
-    // ---- 微信 weixin = 93946 / wx = 99 ----
+    // ---- 微信 weixin = 934946 / wx = 99 ----
 
     @Test
-    fun `weixin full L1 exact`() {
-        val m = T9Matcher.match("934946", idx("微信"))!!
+    fun `weixin initials L1 exact`() {
+        val m = T9Matcher.match("99", idx("微信"))!!
         assertEquals(MatchResult.L1, m.level)
         assertEquals(true, m.exact)
     }
 
     @Test
-    fun `weixin prefix L1`() {
-        val m = T9Matcher.match("934", idx("微信"))!!
-        assertEquals(MatchResult.L1, m.level)
-        assertEquals(false, m.exact)
-    }
-
-    @Test
-    fun `weixin initials L2`() {
-        val m = T9Matcher.match("99", idx("微信"))!!
+    fun `weixin full L2 exact`() {
+        val m = T9Matcher.match("934946", idx("微信"))!!
         assertEquals(MatchResult.L2, m.level)
         assertEquals(true, m.exact)
+    }
+
+    @Test
+    fun `weixin full prefix L2`() {
+        val m = T9Matcher.match("934", idx("微信"))!!
+        assertEquals(MatchResult.L2, m.level)
+        assertEquals(false, m.exact)
     }
 
     // ---- T9启动器：全拼 t9qidongqi = 8974366474；首字母 t9qdq = 89737；混合 qdongq = 736647 / qidq = 7437 ----
 
     @Test
-    fun `t9launcher full L1 exact`() {
-        val m = T9Matcher.match("8974366474", idx("T9启动器"))!!
-        assertEquals(MatchResult.L1, m.level)
+    fun `t9launcher initials L1 exact`() {
+        val m = T9Matcher.match("89737", idx("T9启动器"))!!
+        assertEquals(MatchResult.L1, m.level) // t9(串) + qdq（音节首字母）= 首字母串全文
         assertEquals(true, m.exact)
     }
 
     @Test
-    fun `t9launcher initials L2 exact`() {
-        val m = T9Matcher.match("89737", idx("T9启动器"))!!
-        assertEquals(MatchResult.L2, m.level) // t9(串) + qdq（音节首字母）= 首字母串全文
+    fun `t9launcher full L2 exact`() {
+        val m = T9Matcher.match("8974366474", idx("T9启动器"))!!
+        assertEquals(MatchResult.L2, m.level)
         assertEquals(true, m.exact)
     }
 
@@ -63,10 +66,11 @@ class T9MatcherTest {
         assertEquals(MatchResult.L3, m.level)
     }
 
-    // ---- 1DM+：1→键2、+→键9；序列 2369（折叠）/ 236（删除分隔符） ----
+    // ---- 1DM+：1→键2、+→键9；序列 2369（折叠）/ 236（删除分隔符）。
+    // 纯字母数字名 full==initials，按新规则归入更优的 L1 ----
 
     @Test
-    fun `1dm full L1 exact`() {
+    fun `1dm L1 exact`() {
         val m = T9Matcher.match("2369", idx("1DM+"))!!
         assertEquals(MatchResult.L1, m.level)
         assertEquals(true, m.exact)
@@ -85,10 +89,10 @@ class T9MatcherTest {
         assertEquals(1, m.position)
     }
 
-    // ---- 12306：序列 22396 ----
+    // ---- 12306：序列 22396（纯数字名 full==initials → L1） ----
 
     @Test
-    fun `12306 full L1 exact`() {
+    fun `12306 L1 exact`() {
         val m = T9Matcher.match("22396", idx("12306"))!!
         assertEquals(MatchResult.L1, m.level)
         assertEquals(true, m.exact)
@@ -113,21 +117,21 @@ class T9MatcherTest {
     // ---- 重命名工具：多音字 重 zhong/chong 两种读音均可命中 ----
 
     @Test
-    fun `polyphone zhong reading L1`() {
+    fun `polyphone zhong reading L2`() {
         val m = T9Matcher.match("9466464", idx("重命名工具"))!!
-        assertEquals(MatchResult.L1, m.level)
+        assertEquals(MatchResult.L2, m.level)
     }
 
     @Test
-    fun `polyphone chong reading L1`() {
+    fun `polyphone chong reading L2`() {
         val m = T9Matcher.match("2466464", idx("重命名工具"))!!
-        assertEquals(MatchResult.L1, m.level)
+        assertEquals(MatchResult.L2, m.level)
     }
 
-    // ---- Gmail = 46245 ----
+    // ---- Gmail = 46245（纯字母名 full==initials → L1） ----
 
     @Test
-    fun `gmail full L1`() {
+    fun `gmail L1`() {
         val m = T9Matcher.match("46245", idx("Gmail"))!!
         assertEquals(MatchResult.L1, m.level)
     }
@@ -141,11 +145,21 @@ class T9MatcherTest {
         assertNotNull(T9Matcher.match("9", idx("1DM+"))) // + → 9
     }
 
+    // ---- v3.4 排序语义：首字母前缀(L1) 优先于 全拼前缀(L2) ----
+
+    @Test
+    fun `initials prefix outranks full pinyin prefix`() {
+        // 微信 initials "99" 为 L1；某应用全拼恰以 99 开头（如 word=9673? 构造：label "Zxx"?）
+        // 用真实 fixture：query "93" 命中 微信 全拼前缀(L2)；命中 微信 initials 前缀(L1)
+        val m = T9Matcher.match("9", idx("微信"))!!
+        assertEquals(MatchResult.L1, m.level) // 9 是 initials "99" 的前缀 → L1 优先于全拼前缀
+    }
+
     // ---- 边界 ----
 
     @Test
     fun `no match returns null`() {
-        assertNull(T9Matcher.match("5555", idx("微信"))) // 93946 不含 5555，也无 j/k/l 音
+        assertNull(T9Matcher.match("5555", idx("微信"))) // 934946 不含 5555，也无 j/k/l 音
     }
 
     @Test
