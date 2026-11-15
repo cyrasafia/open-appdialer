@@ -170,7 +170,7 @@
   - 点面板外区域关闭（`FLAG_WATCH_OUTSIDE_TOUCH`）；启动应用后收起面板、常驻服务保留
   - 面板期间需要窗口焦点接收触摸（keypad 自绘无 IME，无输入法冲突）
 - **每次唤起重置会话**（v3.2）：清空输入、恢复空态默认列表（常驻 Service 的 ViewModel 不跨开关保留状态）
-- **上下文离开自动收起**（v3.6）：监听 `ACTION_CLOSE_SYSTEM_DIALOGS`（Home/最近任务触发）与 `ACTION_SCREEN_OFF`，切任务、后台任务管理、息屏时面板收起（服务常驻保留）
+- **上下文离开自动收起**（v3.6）：快速路径 = 窗口失焦回调（切应用/回桌面的瞬间，零延迟）；兜底 = `ACTION_CLOSE_SYSTEM_DIALOGS`（Home/最近任务）与 `ACTION_SCREEN_OFF`（息屏）广播
 - **入场动画**（v3.3 修订）：以底部中心为锚点从 0.6 放大至 1（240ms、LinearOutSlowInEasing），模拟自 dock 位置"展开"；无淡入；overlay 与 Activity 两入口共享；关闭保持瞬时（退出动画为可选后续项）
 - **常驻（FGS）**：`specialUse` 类型（subtype=floating-app-launcher-panel），`START_STICKY`；FGS 常驻通知即 F9 的唤起通知（同 id 复用，点击弹面板）——进程温热，dock 点击即时出面板
 - **权限增量**：`SYSTEM_ALERT_WINDOW`（特殊权限，设置页授权一次，无法运行时弹窗）；`FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE`（安装时权限）

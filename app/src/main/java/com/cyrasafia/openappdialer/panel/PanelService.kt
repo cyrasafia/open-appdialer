@@ -110,6 +110,13 @@ class PanelService : LifecycleService() {
                 }
                 return super.dispatchTouchEvent(event)
             }
+
+            // 即时收起（spec v3.6 快速路径）：切应用/回桌面时新窗口抢走焦点，本回调零延迟触发；
+            // Compose DropdownMenu 的弹层不可聚焦，不会误触发；音量条等系统浮层同样不夺焦
+            override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+                super.onWindowFocusChanged(hasWindowFocus)
+                if (!hasWindowFocus) this@PanelService.hidePanel()
+            }
         }.apply {
             // ViewTree owners 必须设在窗口根视图上：WindowRecomposer 在 rootView 上查找（本 bug 实测修复）
             setViewTreeLifecycleOwner(owner)
