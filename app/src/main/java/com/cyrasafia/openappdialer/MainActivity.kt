@@ -7,78 +7,58 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
-import android.graphics.drawable.Icon
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
 import android.widget.Toast
-import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.cyrasafia.openappdialer.data.AppEntry
-import com.cyrasafia.openappdialer.data.AppIconCache
-import com.cyrasafia.openappdialer.data.AppRepository
-import com.cyrasafia.openappdialer.data.AppsCache
-import com.cyrasafia.openappdialer.data.PackageEventReceiver
-import com.cyrasafia.openappdialer.data.SettingsStore
-import com.cyrasafia.openappdialer.ui.search.AppAction
+import com.cyrasafia.openappdialer.data.ThemeMode
+import com.cyrasafia.openappdialer.panel.AppActionHandler
+import com.cyrasafia.openappdialer.panel.PanelService
 import com.cyrasafia.openappdialer.ui.search.SearchScreen
 import com.cyrasafia.openappdialer.ui.search.SearchViewModel
 import com.cyrasafia.openappdialer.ui.settings.SettingsScreen
 import com.cyrasafia.openappdialer.ui.theme.OpenAppDialerTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import com.cyrasafia.openappdialer.data.PackageEventReceiver
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
 
 /**
- * 浮窗形态主界面（spec F8）：dialog 主题 Activity，
- * 点外部/返回键直接关闭（不清空输入）。
+ * 浮窗 Activity（spec F8/F9）：通知唤起入口 + 设置 + overlay 授权引导。
+ * dock 图标走 PanelLaunchActivity 跳板（spec F10）。
  */
 class MainActivity : ComponentActivity() {
 
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
-    private val repository by lazy {
-        AppRepository(
-            pm = packageManager,
-            cache = AppsCache(File(filesDir, AppsCache.FILE_NAME)),
-            scope = appScope,
-            excludePackage = packageName,
-        )
-    }
-
-    private val iconCache by lazy { AppIconCache(packageManager) }
-
-    private val settings by lazy { SettingsStore(this) }
+    private val app get() = application as OpenAppDialerApp
 
     private val searchViewModel: SearchViewModel by viewModels {
-        viewModelFactory { initializer { SearchViewModel(repository) } }
+        viewModelFactory { initializer { SearchViewModel(app.repository) } }
     }
 
     private val packageReceiver = PackageEventReceiver { action, pkg ->
-        repository.onPackageEvent(action, pkg)
+        app.repository.onPackageEvent(action, pkg)
     }
 
     private var showSettings by mutableStateOf(false)
+    private var showOverlayGuide by mutableStateOf(false)
 
-    /** 长按菜单"添加桌面快捷方式"是否可用（spec v2.7：API 26+ 且启动器支持） */
     private val canPinShortcut: Boolean
         get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             getSystemService(ShortcutManager::class.java)?.isRequestPinShortcutSupported == true
@@ -92,30 +72,59 @@ class MainActivity : ComponentActivity() {
             y = (16 * resources.displayMetrics.density).toInt()
         }
 
-        repository.ensureLoaded()
-        ensureNotification()
+        resolveIntent(intent)
+        setupEntry()
 
         setContent {
-            val themeMode by settings.theme.collectAsState(initial = com.cyrasafia.openappdialer.data.ThemeMode.SYSTEM)
+            val themeMode by app.settings.theme.collectAsState(initial = ThemeMode.SYSTEM)
 
             // 设置页内返回 → 回搜索页；搜索页返回 → 关浮窗（默认 finish）
             BackHandler(enabled = showSettings) { showSettings = false }
 
             OpenAppDialerTheme(mode = themeMode) {
+                // overlay 授权引导（spec F10）
+                if (showOverlayGuide && !Settings.canDrawOverlays(this)) {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { showOverlayGuide = false },
+                        title = { Text(getString(R.string.overlay_guide_title)) },
+                        text = { Text(getString(R.string.overlay_guide_text)) },
+                        confirmButton = {
+                            androidx.compose.material3.TextButton(onClick = { requestOverlayPermission() }) {
+                                Text(getString(R.string.overlay_guide_action))
+                            }
+                        },
+                        dismissButton = {
+                            androidx.compose.material3.TextButton(onClick = { showOverlayGuide = false }) {
+                                Text(getString(android.R.string.cancel))
+                            }
+                        },
+                    )
+                }
+
                 if (showSettings) {
                     SettingsScreen(
                         currentTheme = themeMode,
                         onSelectTheme = { mode ->
-                            appScope.launch { settings.setTheme(mode) }
+                            app.appScope.launch { app.settings.setTheme(mode) }
                         },
                     )
                 } else {
                     SearchScreen(
                         viewModel = searchViewModel,
-                        iconCache = iconCache,
+                        iconCache = app.iconCache,
                         canPinShortcut = canPinShortcut,
-                        onLaunch = ::launchApp,
-                        onAppAction = ::handleAppAction,
+                        onLaunch = { entry ->
+                            searchViewModel.onLaunching()
+                            AppActionHandler.launchApp(this, app.appScope, entry) { pkg ->
+                                app.repository.recordLaunch(pkg)
+                            }
+                            finish()
+                        },
+                        onAppAction = { entry, action ->
+                            AppActionHandler.handle(this, app.appScope, entry, action) { pkg ->
+                                app.iconCache.icon(pkg)
+                            }
+                        },
                         onOpenSettings = { showSettings = true },
                     )
                 }
@@ -123,85 +132,27 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** 启动应用（spec F4）：冻结列表 → 记录使用 → 启动 → finish；失败 toast + 应用详情兜底 */
-    private fun launchApp(entry: AppEntry) {
-        searchViewModel.onLaunching() // 先冻结，防止使用数据更新导致点击项跳位（spec v2.5）
-        repository.recordLaunch(entry.packageName)
-        val intent = packageManager.getLaunchIntentForPackage(entry.packageName)
-        try {
-            if (intent != null) {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                startActivity(intent)
-                finish()
-            } else {
-                openAppDetails(entry.packageName)
-                finish()
-            }
-        } catch (e: Exception) {
-            // 冻结/受限等异常场景（spec F4 验收项）
-            Toast.makeText(this, R.string.launch_failed, Toast.LENGTH_SHORT).show()
-            openAppDetails(entry.packageName)
-            finish()
-        }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        resolveIntent(intent)
     }
 
-    /** 长按菜单动作（spec v2.7）：快捷方式 / 详情 / 卸载 */
-    private fun handleAppAction(entry: AppEntry, action: AppAction) {
-        when (action) {
-            AppAction.PIN_SHORTCUT -> pinShortcut(entry)
-
-            AppAction.DETAILS -> {
-                openAppDetails(entry.packageName)
-                finish()
-            }
-
-            AppAction.UNINSTALL -> {
-                runCatching {
-                    startActivity(
-                        Intent(Intent.ACTION_DELETE, Uri.fromParts("package", entry.packageName, null)),
-                    )
-                }
-                finish()
-            }
-        }
+    private fun resolveIntent(intent: Intent?) {
+        showOverlayGuide = intent?.getBooleanExtra(EXTRA_REQUEST_OVERLAY, false) ?: false
     }
 
-    /** 添加桌面快捷方式（spec v2.7）：requestPinShortcut，图标取自内存缓存 */
-    private fun pinShortcut(entry: AppEntry) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val sm = getSystemService(ShortcutManager::class.java)
-        if (sm == null || !sm.isRequestPinShortcutSupported) {
-            Toast.makeText(this, R.string.pin_shortcut_unsupported, Toast.LENGTH_SHORT).show()
-            return
+    /** 入口策略（F9/F10）：已授权 overlay → 启动常驻面板（FGS 通知即唤起入口）；否则走应用内通知 */
+    private fun setupEntry() {
+        if (Settings.canDrawOverlays(this)) {
+            PanelService.start(this)
+            return // FGS 常驻通知即唤起入口，不再自建通知
         }
-        appScope.launch {
-            val bmp = iconCache.icon(entry.packageName)
-            val launch = packageManager.getLaunchIntentForPackage(entry.packageName)
-            withContext(Dispatchers.Main) {
-                if (launch == null) {
-                    Toast.makeText(this@MainActivity, R.string.pin_shortcut_unsupported, Toast.LENGTH_SHORT).show()
-                    return@withContext
-                }
-                launch.action = Intent.ACTION_MAIN
-                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                val info = ShortcutInfo.Builder(this@MainActivity, "app-" + entry.packageName)
-                    .setShortLabel(entry.label)
-                    .setIntent(launch)
-                    .apply { if (bmp != null) setIcon(Icon.createWithBitmap(bmp)) }
-                    .build()
-                sm.requestPinShortcut(info, null)
-            }
+        if (showOverlayGuide) {
+            // 授权引导由跳板触发：先请求通知权限（引导弹窗需要），授权页跳转见 Compose 层入口
         }
-    }
-
-    private fun openAppDetails(pkg: String) {
-        runCatching {
-            startActivity(
-                Intent(
-                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.fromParts("package", pkg, null),
-                ),
-            )
+        ensureNotification()
+        if (showOverlayGuide) {
+            Toast.makeText(this, R.string.overlay_guide_toast, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -211,7 +162,6 @@ class MainActivity : ComponentActivity() {
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) {
-            // 唯一运行时权限：拒绝时静默降级（无通知入口），下次打开再请求
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIF)
             return
         }
@@ -259,7 +209,20 @@ class MainActivity : ComponentActivity() {
         nm.notify(NOTIF_ID, notification)
     }
 
-    override fun onStart() {        super.onStart()
+    /** overlay 授权引导（spec F10）：跳系统"显示在其他应用上层"开关页 */
+    private fun requestOverlayPermission() {
+        runCatching {
+            startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.fromParts("package", packageName, null),
+                ),
+            )
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
         val filter = IntentFilter().apply {
             addDataScheme("package")
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -270,7 +233,13 @@ class MainActivity : ComponentActivity() {
         ContextCompat.registerReceiver(
             this, packageReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED,
         )
-        repository.ensureLoaded() // resume 兜底（spec F1：防漏广播）
+        app.repository.ensureLoaded() // resume 兜底（spec F1：防漏广播）
+
+        // 从授权页返回：已授权则立即切换到常驻面板并关闭浮窗
+        if (Settings.canDrawOverlays(this)) {
+            PanelService.start(this)
+            if (showOverlayGuide) finish()
+        }
     }
 
     override fun onStop() {
@@ -279,6 +248,7 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        const val EXTRA_REQUEST_OVERLAY = "request_overlay"
         private const val REQUEST_NOTIF = 1001
         private const val NOTIF_CHANNEL_ID = "search"
         private const val NOTIF_ID = 1001

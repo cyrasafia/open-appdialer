@@ -22,4 +22,8 @@
     <string name="menu_uninstall">卸载</string>
     <string name="pin_shortcut_unsupported">当前启动器不支持添加快捷方式</string>
     <string name="notif_channel_name">快速搜索</string>
+    <string name="overlay_guide_title">开启桌面图标直达</string>
+    <string name="overlay_guide_text">授予「显示在其他应用上层」权限后，点击桌面图标即可瞬时唤出搜索面板且无闪屏。请到系统设置中开启一次。</string>
+    <string name="overlay_guide_action">去授权</string>
+    <string name="overlay_guide_toast">请授予「显示在其他应用上层」以启用桌面图标直达</string>
 </resources>

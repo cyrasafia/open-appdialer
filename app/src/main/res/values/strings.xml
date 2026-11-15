@@ -22,4 +22,8 @@
     <string name="menu_uninstall">Uninstall</string>
     <string name="pin_shortcut_unsupported">Launcher doesn\'t support pinned shortcuts</string>
     <string name="notif_channel_name">Quick search</string>
+    <string name="overlay_guide_title">Enable dock quick launch</string>
+    <string name="overlay_guide_text">Grant \"Display over other apps\" so tapping the home screen icon opens the panel instantly, with no flash. Grant it once in system settings.</string>
+    <string name="overlay_guide_action">Grant now</string>
+    <string name="overlay_guide_toast">Grant \"Display over other apps\" to enable dock quick launch</string>
 </resources>

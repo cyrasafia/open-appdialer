@@ -1,4 +1,4 @@
-# Open App Dialer 技术规格（Spec v2.9）
+# Open AppDialer 技术规格（Spec v3.1）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -160,6 +160,20 @@
 - **通知渠道**：单独渠道（"快速搜索"），用户可自行调整重要性
 - 不新增 Service、不新增 `SYSTEM_ALERT_WINDOW`（真悬浮层 overlay 为 backlog 方案二）
 
+### F10 dock 直达（v3.1，方案二：NoDisplay 跳板 + overlay Service + FGS 常驻）
+
+- **桌面图标改为 `Theme.NoDisplay` 跳板 Activity**：无窗口 → 无 starting window → 无垫色（dock 点击物理上无闪屏来源）
+  - 已授予"显示在其他应用上层"：启动 `PanelService` 并显示 overlay 面板，跳板立即 finish
+  - 未授予：打开 MainActivity 显示授权引导卡片（`ACTION_MANAGE_OVERLAY_PERMISSION`），授权后自动启动常驻
+- **PanelService**（`LifecycleService`，Compose 面板 overlay 于 `TYPE_APPLICATION_OVERLAY` 窗口）：
+  - 复用 SearchScreen 全部交互（搜索/启动/长按菜单）；面板底部对齐（与 F8 一致的 16dp 边距）
+  - 点面板外区域关闭（`FLAG_WATCH_OUTSIDE_TOUCH`）；启动应用后收起面板、常驻服务保留
+  - 面板期间需要窗口焦点接收触摸（keypad 自绘无 IME，无输入法冲突）
+- **常驻（FGS）**：`specialUse` 类型（subtype=floating-app-launcher-panel），`START_STICKY`；FGS 常驻通知即 F9 的唤起通知（同 id 复用，点击弹面板）——进程温热，dock 点击即时出面板
+- **权限增量**：`SYSTEM_ALERT_WINDOW`（特殊权限，设置页授权一次，无法运行时弹窗）；`FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE`（安装时权限）
+- 降级链：未授权 overlay → dock 点击进授权引导；拒绝常驻（划掉 FGS 通知）→ 下次 dock 点击仍走跳板冷启动 Service（无闪屏，仅 ~0.3-0.8s 延迟）
+- MainActivity 保留：通知唤起（未授权/非常驻时的入口）、设置页、授权引导
+
 ## 5. 非功能需求
 
 | 指标 | 目标 | 度量方式 |
@@ -167,7 +181,7 @@
 | 冷启动到可输入 | < 500ms（缓存命中） | `adb shell am start -W`，CI 手动清单 |
 | 按键到结果更新 | < 1 帧（**8ms @ 120Hz 高刷**），500 应用 fixture 下匹配 < 5ms | JVM 单测基准 |
 | APK 体积 | ≤ 2MB | CI 构建产物检查，超限失败 |
-| 权限 | manifest 仅 `POST_NOTIFICATIONS`（33+ 通知唤起用，运行时请求一次、可拒绝）+ `<queries>` 可见性（见 F1）；无 `INTERNET`/`VIBRATE` | manifest 审查 |
+| 权限 | manifest：`POST_NOTIFICATIONS`（33+，可拒绝）+ `SYSTEM_ALERT_WINDOW`（特殊权限，dock 直达用）+ FGS 相关（安装时）+ `<queries>` 可见性（见 F1）；无 `INTERNET`/`VIBRATE` | manifest 审查 |
 | 隐私 | 无网络、无统计、无崩溃上报，数据仅本地 | manifest + 代码审查 |
 | 兼容 | minSdk 23，compileSdk/targetSdk 36（AGP 9.1 支持上限；37 已随 SDK 安装，AGP 适配后跟进升级），长期跟进新版本 | CI 矩阵 |
 | 高刷屏 | 跟随系统刷新率（90/120Hz+），不锁定 60fps；帧预算按 8ms 设计 | 真机手动验收（120Hz 设备） |
@@ -264,6 +278,7 @@ data class AppEntry(
 
 ## 10. 变更记录
 
+- 2026-11-15 v3.1 新增 F10 dock 直达：NoDisplay 跳板 + PanelService overlay + FGS 常驻（常驻通知复用为唤起入口）；SYSTEM_ALERT_WINDOW 特殊权限 + specialUse FGS；dock 点击理论上零闪屏（无 starting window）
 - 2026-11-15 v3.0 新增 F9 通知唤起（方案一）：常驻 LOW 通知 → PendingIntent 拉起浮窗，不走桌面转场（规避启动闪烁）；POST_NOTIFICATIONS 成为唯一运行时权限（可拒绝）；无 Service/无 overlay 授权
 - 2026-11-15 v2.10 根因定论（官方文档互证）：启动闪烁 = 启动转场素材缺失的系统兜底——Google《Splash screens》要求 splash 背景为不透明单色（透明属未定义行为，各版本/OEM 兜底色不同：深色→黑、HyperOS 4 浅色→白）；AOSP《Task snapshots》：桌面打开动画以 TaskSnapshotSurface/splash 为素材，半透明任务两者皆无效，SurfaceFlinger 以纯色填充。结构性矛盾，应用侧不可修，彻底解法仍是通知唤起（backlog）
 - 2026-11-15 v2.9 HyperOS 4.0（Android 17）浅色模式启动白屏：判定为 v2.6 同族问题（系统桌面启动转场对透明窗口快照按主题色合成，深色→黑、浅色→白），主题层无剩余手段，接受遗留；模拟器复现受阻（google_apis android-37.0 r08 镜像不稳定：uiautomator/package 服务/intent 解析均异常），未做无验证的盲目改动；彻底解法仍为 backlog 的通知/快捷开关唤起

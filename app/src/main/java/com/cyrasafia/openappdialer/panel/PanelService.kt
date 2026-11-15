@@ -1,0 +1,190 @@
+package com.cyrasafia.openappdialer.panel
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.PixelFormat
+import android.os.Build
+import android.provider.Settings
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.WindowManager
+import android.widget.FrameLayout
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.ComposeView
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.cyrasafia.openappdialer.MainActivity
+import com.cyrasafia.openappdialer.OpenAppDialerApp
+import com.cyrasafia.openappdialer.R
+import com.cyrasafia.openappdialer.data.ThemeMode
+import com.cyrasafia.openappdialer.ui.search.SearchScreen
+import com.cyrasafia.openappdialer.ui.search.SearchViewModel
+import com.cyrasafia.openappdialer.ui.theme.OpenAppDialerTheme
+
+/**
+ * overlay 面板服务（spec F10）：
+ * - FGS 常驻（specialUse），常驻通知即唤起入口（与 F9 同 id 复用）
+ * - dock 跳板/通知点击 → ACTION_SHOW → 显示 overlay Compose 面板
+ * - 点面板外关闭；启动应用后收起、服务常驻
+ */
+class PanelService : LifecycleService() {
+
+    private val app: OpenAppDialerApp get() = application as OpenAppDialerApp
+    private val owner = ServiceLifecycleOwner()
+    private var panelView: FrameLayout? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        owner.performRestore(null)
+        owner.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        startForeground(NOTIF_ID, buildNotification())
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        if (intent?.action == ACTION_SHOW && Settings.canDrawOverlays(this)) {
+            showPanel()
+        }
+        return START_STICKY // 常驻（spec v3.1 用户决策）
+    }
+
+    private fun showPanel() {
+        if (panelView != null) return
+        val wm = getSystemService(WindowManager::class.java) ?: return
+
+        val density = resources.displayMetrics.density
+        val lp = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            y = (16 * density).toInt() // 与 F8 浮窗一致
+        }
+
+        val root = object : FrameLayout(this) {
+            override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+                if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                    hidePanel()
+                    return true
+                }
+                return super.dispatchTouchEvent(event)
+            }
+        }
+
+        val compose = ComposeView(this).apply {
+            setViewTreeLifecycleOwner(owner)
+            setViewTreeSavedStateRegistryOwner(owner)
+            setContent {
+                val themeMode by app.settings.theme.collectAsState(initial = ThemeMode.SYSTEM)
+                OpenAppDialerTheme(mode = themeMode) {
+                    SearchScreen(
+                        viewModel = searchViewModel,
+                        iconCache = app.iconCache,
+                        canPinShortcut = canPinShortcut(),
+                        onLaunch = { entry ->
+                            AppActionHandler.launchApp(this@PanelService, app.appScope, entry) { pkg ->
+                                app.repository.recordLaunch(pkg)
+                            }
+                            hidePanel()
+                        },
+                        onAppAction = { entry, action ->
+                            AppActionHandler.handle(
+                                this@PanelService, app.appScope, entry, action,
+                            ) { pkg -> app.iconCache.icon(pkg) }
+                            if (action != com.cyrasafia.openappdialer.ui.search.AppAction.PIN_SHORTCUT) hidePanel()
+                        },
+                        onOpenSettings = {
+                            runCatching {
+                                startActivity(
+                                    Intent(this@PanelService, MainActivity::class.java)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }
+                            hidePanel()
+                        },
+                    )
+                }
+            }
+        }
+        root.addView(compose)
+        wm.addView(root, lp)
+        owner.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        owner.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+        panelView = root
+    }
+
+    fun hidePanel() {
+        val view = panelView ?: return
+        panelView = null
+        owner.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        owner.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        runCatching { getSystemService(WindowManager::class.java)?.removeView(view) }
+    }
+
+    private val searchViewModel: SearchViewModel by lazy { SearchViewModel(app.repository) }
+
+    private fun canPinShortcut(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            getSystemService(android.content.pm.ShortcutManager::class.java)?.isRequestPinShortcutSupported == true
+
+    private fun buildNotification(): android.app.Notification {
+        val nm = getSystemService(NotificationManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            nm?.createNotificationChannel(
+                NotificationChannel(
+                    NOTIF_CHANNEL_ID,
+                    getString(R.string.notif_channel_name),
+                    NotificationManager.IMPORTANCE_LOW,
+                ).apply { setSound(null, null) },
+            )
+        }
+        val showPanel = PendingIntent.getService(
+            this, 0,
+            Intent(this, PanelService::class.java).setAction(ACTION_SHOW),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        return NotificationCompat.Builder(this, NOTIF_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(getString(R.string.search_hint))
+            .setContentIntent(showPanel)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .build()
+    }
+
+    override fun onDestroy() {
+        hidePanel()
+        owner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        super.onDestroy()
+    }
+
+    companion object {
+        const val ACTION_SHOW = "com.cyrasafia.openappdialer.panel.SHOW"
+
+        @JvmStatic
+        fun start(context: android.content.Context) {
+            ContextCompat.startForegroundService(
+                context,
+                Intent(context, PanelService::class.java).setAction(ACTION_SHOW),
+            )
+        }
+
+        private const val NOTIF_CHANNEL_ID = "search"
+        private const val NOTIF_ID = 1001
+    }
+}
