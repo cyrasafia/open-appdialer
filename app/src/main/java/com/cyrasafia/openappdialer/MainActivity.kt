@@ -1,7 +1,12 @@
 package com.cyrasafia.openappdialer
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
@@ -19,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -87,6 +93,7 @@ class MainActivity : ComponentActivity() {
         }
 
         repository.ensureLoaded()
+        ensureNotification()
 
         setContent {
             val themeMode by settings.theme.collectAsState(initial = com.cyrasafia.openappdialer.data.ThemeMode.SYSTEM)
@@ -198,8 +205,61 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onStart() {
-        super.onStart()
+    /** 通知唤起（spec F9）：常驻 LOW 通知，点击拉起浮窗（不走桌面转场） */
+    private fun ensureNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            // 唯一运行时权限：拒绝时静默降级（无通知入口），下次打开再请求
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIF)
+            return
+        }
+        postSearchNotification()
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_NOTIF &&
+            grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+        ) {
+            postSearchNotification()
+        }
+    }
+
+    private fun postSearchNotification() {
+        val nm = getSystemService(NotificationManager::class.java) ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                NOTIF_CHANNEL_ID,
+                getString(R.string.notif_channel_name),
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply { setSound(null, null) }
+            nm.createNotificationChannel(channel)
+        }
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        val pi = PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val notification = NotificationCompat.Builder(this, NOTIF_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(getString(R.string.search_hint))
+            .setContentIntent(pi)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+        nm.notify(NOTIF_ID, notification)
+    }
+
+    override fun onStart() {        super.onStart()
         val filter = IntentFilter().apply {
             addDataScheme("package")
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -216,5 +276,11 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         unregisterReceiver(packageReceiver)
+    }
+
+    companion object {
+        private const val REQUEST_NOTIF = 1001
+        private const val NOTIF_CHANNEL_ID = "search"
+        private const val NOTIF_ID = 1001
     }
 }

@@ -29,7 +29,7 @@
 
 ## 安装
 
-从 [Releases](https://github.com/cyrasafia/open-appdialer/releases) 下载最新 APK 安装（Android 6.0+，单 APK 约 1.2MB，无需任何权限）。
+从 [Releases](https://github.com/cyrasafia/open-appdialer/releases) 下载最新 APK 安装（Android 6.0+，单 APK 约 1.2MB）。唯一权限是通知（用于通知栏快速唤起，可拒绝；拒绝后不影响搜索功能）。
 
 ## 已知限制
 

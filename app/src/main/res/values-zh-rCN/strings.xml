@@ -21,4 +21,5 @@
     <string name="menu_app_details">查看详情</string>
     <string name="menu_uninstall">卸载</string>
     <string name="pin_shortcut_unsupported">当前启动器不支持添加快捷方式</string>
+    <string name="notif_channel_name">快速搜索</string>
 </resources>

@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- 通知唤起（spec F9）：唯一运行时权限（33+），拒绝时静默降级 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- 无 INTERNET 权限（永不申请）。可见性通过 <queries> 声明，
          比 QUERY_ALL_PACKAGES 更精准且无需 Play 特殊审核：
          仅可见带 MAIN/LAUNCHER intent-filter 的应用（即 F1 数据源） -->
@@ -22,6 +25,7 @@
             android:name=".MainActivity"
             android:excludeFromRecents="true"
             android:exported="true"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="stateAlwaysHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

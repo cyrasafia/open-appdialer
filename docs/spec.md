@@ -149,7 +149,16 @@
 - 禁用 starting window 预览，且 `windowIsTranslucent` 跳过 Android 12+ 系统 SplashScreen（消除启动黑底的根因），v31 覆盖将 splash 背景亦置透明（v2.1/v2.2）
 - `excludeFromRecents`：关闭后不出现在后台窗口列表（v2.1）
 - 启动/关闭动画置空（`windowAnimationStyle` 覆盖 taskOpen 等，spec v2.5）：消除 MIUI 启动缩放动画导致的桌面变暗约 1s（小米官方文档建议方案）
-- **遗留已接受**（v2.6）：从桌面图标启动仍有约一帧轻微闪烁——MIUI 桌面自绘的图标点击动效，早于应用窗口创建，主题层无法禁用（已试尽 preview/splash/translucent/动画置空/壁纸垫底，壁纸垫底在 MIUI 反而垫出应用图标白底）；彻底解法是通知/快捷开关唤起 overlay（backlog，用户暂不接受）
+- **遗留已接受**（v2.6）：从桌面图标启动仍有约一帧轻微闪烁——系统桌面自绘的图标点击动效对透明窗口快照做主题色合成（深色→黑、浅色→白，根因见 v2.10），主题层无法禁用；通知唤起（F9）不经过桌面转场，为该问题的规避路径
+
+### F9 通知唤起（v3.0，方案一：通知 → 浮窗 Activity）
+
+- **常驻通知**：低优先级（LOW）、无声、`setOngoing(true)` 不可划掉；标题 = 应用名，正文 = 搜索提示语；small icon 用图标前景矢量
+- **点击行为**：`PendingIntent` 拉起 MainActivity（`singleTop` + `CLEAR_TOP`，面板已开时复用不叠层）；通知启动不经过桌面转场动画（规避 F8 遗留闪烁），且透明浮窗下方为当前应用，近似悬浮体验
+- **创建时机**：MainActivity `onCreate` 时创建/更新（被用户划掉后下次打开自动恢复）；**不做开机自启**（避免新增 `RECEIVE_BOOT_COMPLETED` 权限）
+- **权限**：`POST_NOTIFICATIONS`（Android 13+）为**唯一运行时权限**，首次打开请求一次；拒绝时静默降级（无通知入口，其余功能不受影响），下次打开再请求
+- **通知渠道**：单独渠道（"快速搜索"），用户可自行调整重要性
+- 不新增 Service、不新增 `SYSTEM_ALERT_WINDOW`（真悬浮层 overlay 为 backlog 方案二）
 
 ## 5. 非功能需求
 
@@ -158,7 +167,7 @@
 | 冷启动到可输入 | < 500ms（缓存命中） | `adb shell am start -W`，CI 手动清单 |
 | 按键到结果更新 | < 1 帧（**8ms @ 120Hz 高刷**），500 应用 fixture 下匹配 < 5ms | JVM 单测基准 |
 | APK 体积 | ≤ 2MB | CI 构建产物检查，超限失败 |
-| 权限 | 零权限声明（`<queries>` 元素声明可见性，见 F1；触觉反馈无需 `VIBRATE`） | manifest 审查 |
+| 权限 | manifest 仅 `POST_NOTIFICATIONS`（33+ 通知唤起用，运行时请求一次、可拒绝）+ `<queries>` 可见性（见 F1）；无 `INTERNET`/`VIBRATE` | manifest 审查 |
 | 隐私 | 无网络、无统计、无崩溃上报，数据仅本地 | manifest + 代码审查 |
 | 兼容 | minSdk 23，compileSdk/targetSdk 36（AGP 9.1 支持上限；37 已随 SDK 安装，AGP 适配后跟进升级），长期跟进新版本 | CI 矩阵 |
 | 高刷屏 | 跟随系统刷新率（90/120Hz+），不锁定 60fps；帧预算按 8ms 设计 | 真机手动验收（120Hz 设备） |
@@ -255,6 +264,7 @@ data class AppEntry(
 
 ## 10. 变更记录
 
+- 2026-11-15 v3.0 新增 F9 通知唤起（方案一）：常驻 LOW 通知 → PendingIntent 拉起浮窗，不走桌面转场（规避启动闪烁）；POST_NOTIFICATIONS 成为唯一运行时权限（可拒绝）；无 Service/无 overlay 授权
 - 2026-11-15 v2.10 根因定论（官方文档互证）：启动闪烁 = 启动转场素材缺失的系统兜底——Google《Splash screens》要求 splash 背景为不透明单色（透明属未定义行为，各版本/OEM 兜底色不同：深色→黑、HyperOS 4 浅色→白）；AOSP《Task snapshots》：桌面打开动画以 TaskSnapshotSurface/splash 为素材，半透明任务两者皆无效，SurfaceFlinger 以纯色填充。结构性矛盾，应用侧不可修，彻底解法仍是通知唤起（backlog）
 - 2026-11-15 v2.9 HyperOS 4.0（Android 17）浅色模式启动白屏：判定为 v2.6 同族问题（系统桌面启动转场对透明窗口快照按主题色合成，深色→黑、浅色→白），主题层无剩余手段，接受遗留；模拟器复现受阻（google_apis android-37.0 r08 镜像不稳定：uiautomator/package 服务/intent 解析均异常），未做无验证的盲目改动；彻底解法仍为 backlog 的通知/快捷开关唤起
 - 2026-11-15 v2.8 回滚 MIUI 快捷方式特殊处理（设置页授权入口、失败提示、权限页直达），暂不针对 MIUI 做适配。实测结论保留：未授予系统私有"创建桌面快捷方式"权限时 `requestPinShortcut` 返回 true 且静默丢弃（AppOps 权限，无法主动请求/查询，小米官方建议引导用户手动开启），授权后功能正常；相关实现见 git 历史可随时恢复
