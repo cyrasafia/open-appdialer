@@ -23,8 +23,10 @@ class AppsCacheTest {
         install: Long = 1_000L,
         count: Int = 3,
         last: Long = 99L,
+        activity: String = "$pkg.MainActivity",
     ) = AppEntry(
         packageName = pkg,
+        activityName = activity,
         label = label,
         firstInstallTime = install,
         launchCount = count,
@@ -32,6 +34,18 @@ class AppsCacheTest {
         index = LabelIndexer.index(label, pinyin),
         packageKeys = LabelIndexer.packageKeys(pkg),
     )
+
+    @Test
+    fun `same package two launcher entries roundtrip`() {
+        // v3.7：com.android.contacts = 联系人 + 电话 双入口共存
+        val cache = AppsCache(tmp.newFile())
+        val apps = listOf(
+            entry("com.android.contacts", "联系人", activity = "com.android.contacts.activities.PeopleActivity"),
+            entry("com.android.contacts", "电话", activity = "com.android.dialer.app.DialerActivity", count = 1, last = 7L),
+        )
+        cache.save(apps)
+        assertEquals(apps, cache.load())
+    }
 
     @Test
     fun `missing file returns null`() {

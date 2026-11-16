@@ -19,6 +19,7 @@ import java.io.File
 @Serializable
 data class CachedApp(
     val p: String, // packageName
+    val a: String = "", // activityName（v3.7：同包多入口）
     val l: String, // label
     val i: Long, // firstInstallTime
     val c: Int = 0, // launchCount
@@ -107,6 +108,7 @@ class AppsCache(private val file: File) {
 
     private fun CachedApp.toEntry(): AppEntry = AppEntry(
         packageName = p,
+        activityName = a,
         label = l,
         firstInstallTime = i,
         launchCount = c,
@@ -118,14 +120,14 @@ class AppsCache(private val file: File) {
     private fun AppEntry.toCached(): CachedApp {
         val (vf, vi, u) = IndexCodec.encode(index)
         return CachedApp(
-            p = packageName, l = label, i = firstInstallTime, c = launchCount, t = lastLaunchAt,
+            p = packageName, a = activityName, l = label, i = firstInstallTime, c = launchCount, t = lastLaunchAt,
             vf = vf, vi = vi, u = u, k = packageKeys,
         )
     }
 
     companion object {
-        /** v4：首字母含英文逐词首字符、新增 packageKeys（spec v3.5） */
-        const val SCHEMA_VERSION = 4
+        /** v5：条目键升级为 包名+Activity（同包多启动入口共存，spec v3.7） */
+        const val SCHEMA_VERSION = 5
         const val FILE_NAME = "apps.json"
     }
 }

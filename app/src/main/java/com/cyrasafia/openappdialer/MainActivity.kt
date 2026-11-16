@@ -115,8 +115,8 @@ class MainActivity : ComponentActivity() {
                         canPinShortcut = canPinShortcut,
                         onLaunch = { entry ->
                             searchViewModel.onLaunching()
-                            AppActionHandler.launchApp(this, app.appScope, entry) { pkg ->
-                                app.repository.recordLaunch(pkg)
+                            AppActionHandler.launchApp(this, app.appScope, entry) { pkg, act ->
+                                app.repository.recordLaunch(pkg, act)
                             }
                             finish()
                         },

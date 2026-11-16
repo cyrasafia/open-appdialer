@@ -10,6 +10,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AppEntry(
     val packageName: String,
+    /** 启动 Activity 全类名（v3.7：同一包可有多个启动入口，如 com.android.contacts = 联系人+电话） */
+    val activityName: String = "",
     val label: String,
     /** 首次安装时间 epoch ms（空态"新安装"判定依据，spec Q9：≤2h） */
     val firstInstallTime: Long,

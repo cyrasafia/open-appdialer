@@ -1,4 +1,4 @@
-# Open AppDialer 技术规格（Spec v3.6）
+# Open AppDialer 技术规格（Spec v3.7）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -39,7 +39,7 @@
 
 - **数据源**：`PackageManager.queryIntentActivities(MainActivityIntent)`，即**当前用户 profile** 的所有可启动应用；不跨 work profile / 私密空间聚合（Q6 已定）。
 - **权限**：manifest 用 `<queries>` 元素声明 `<intent>` MAIN/LAUNCHER 可见性——仅可见带桌面入口的应用（与数据源精确对齐），**不使用** `QUERY_ALL_PACKAGES`（免 Play 专项审核），安装时授予、无运行时弹窗。`INTERNET` 永不申请。
-- **应用条目字段**：包名、label、预计算匹配序列、包名键串（`packageKeys`，v3.5）、首次安装时间（`firstInstallTime`）、启动次数、最近启动时间。
+- **应用条目字段**：包名、启动 Activity、label、预计算匹配序列、包名键串（`packageKeys`）、首次安装时间（`firstInstallTime`）、启动次数、最近启动时间。**同一包名的多个启动入口为独立条目，身份键 = 包名 + Activity**（v3.7：修复 com.android.contacts 双入口只保留联系人的问题）。
 - **监听**：`PACKAGE_ADDED / REMOVED / REPLACED / CHANGED` 广播 + resume 时 diff 兜底（防漏广播），增量更新列表与缓存。
 - **缓存**（`filesDir/apps.json`）：
   - 存包名、label、预计算拼音/匹配序列、使用数据；损坏即静默重建。
@@ -281,6 +281,7 @@ data class AppEntry(
 
 ## 10. 变更记录
 
+- 2026-11-16 v3.7 修复同包多启动入口丢失（com.android.contacts 双入口只保留联系人、电话搜不到）：条目身份键升级为 包名+Activity（缓存 schema v5，usage 迁移：同包首个入口继承），启动与固定快捷方式改用精确组件 Intent，使用计数按入口独立
 - 2026-11-15 v3.6 切任务/后台任务管理/息屏时自动收起面板（ACTION_CLOSE_SYSTEM_DIALOGS + ACTION_SCREEN_OFF，零权限）
 
 - 2026-11-15 v3.5 匹配语义升级：层级改为 名称首字母 > 全拼 > 混合 > 包名，段内 完全>前缀>子串；英文按词取首字母（驼峰/数字边界分词，ob→Open builder）；新增包名段匹配（packageKeys，apps.json schema v4）；用户示例锁定测试（92：相册>携程旅行>wanderboat）

@@ -16,7 +16,13 @@ class AppOrderingTest {
         install: Long = 0L,
         count: Int = 0,
         last: Long = 0L,
-    ) = AppEntry(pkg, label, install, count, last)
+    ) = AppEntry(
+        packageName = pkg,
+        label = label,
+        firstInstallTime = install,
+        launchCount = count,
+        lastLaunchAt = last,
+    )
 
     @Test
     fun `fresh installs first, newest first, then recency`() {

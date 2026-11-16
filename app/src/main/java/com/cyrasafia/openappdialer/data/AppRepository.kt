@@ -62,11 +62,12 @@ class AppRepository(
     suspend fun fullScan() = withContext(Dispatchers.IO) {
         runCatching {
             val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            val old = _apps.value.associateBy { it.packageName }
+            val old = _apps.value.associateBy { it.packageName } // 旧 usage 按包名合并（v3.7：同包多入口首个继承）
             val entries = pm.queryIntentActivities(intent, 0)
                 .asSequence()
                 .mapNotNull { ri ->
-                    val pkg = ri.activityInfo?.applicationInfo?.packageName ?: return@mapNotNull null
+                    val info = ri.activityInfo ?: return@mapNotNull null
+                    val pkg = info.applicationInfo?.packageName ?: return@mapNotNull null
                     if (pkg == excludePackage) return@mapNotNull null
                     val label = runCatching { ri.loadLabel(pm).toString() }.getOrDefault(pkg)
                     val installedAt = runCatching {
@@ -80,10 +81,12 @@ class AppRepository(
                             firstInstallTime = installedAt,
                             index = indexed,
                             packageKeys = LabelIndexer.packageKeys(pkg),
+                            activityName = info.name,
                         )
                     } else {
                         AppEntry(
                             packageName = pkg,
+                            activityName = info.name,
                             label = label,
                             firstInstallTime = installedAt,
                             index = indexed,
@@ -91,8 +94,8 @@ class AppRepository(
                         )
                     }
                 }
-                .distinctBy { it.packageName }
-                .sortedBy { it.label }
+                .distinctBy { it.packageName to it.activityName } // v3.7：同包多入口共存
+                .sortedWith(compareBy({ it.label }, { it.activityName }))
                 .toList()
             _apps.value = entries
             cache.save(entries)
@@ -106,12 +109,16 @@ class AppRepository(
         }
     }
 
-    /** 启动记录（spec F1 使用数据；M3 由结果点击接入） */
-    fun recordLaunch(pkg: String) {
+    /** 启动记录（spec F1 使用数据；M3 由结果点击接入）。v3.7：按 包名+Activity 条目级计数 */
+    fun recordLaunch(pkg: String, activity: String) {
         scope.launch {
             val now = System.currentTimeMillis()
             _apps.value = _apps.value.map {
-                if (it.packageName == pkg) it.copy(launchCount = it.launchCount + 1, lastLaunchAt = now) else it
+                if (it.packageName == pkg && it.activityName == activity) {
+                    it.copy(launchCount = it.launchCount + 1, lastLaunchAt = now)
+                } else {
+                    it
+                }
             }
             persist()
         }
@@ -120,24 +127,37 @@ class AppRepository(
     private suspend fun upsert(pkg: String) = withContext(Dispatchers.IO) {
         runCatching {
             if (pkg == excludePackage) return@runCatching
-            pm.getLaunchIntentForPackage(pkg) ?: return@runCatching // 无桌面入口 → 不入列表
-            val label = runCatching {
-                pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-            }.getOrDefault(pkg)
+            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+            val resolved = pm.queryIntentActivities(intent, 0).filter {
+                it.activityInfo?.applicationInfo?.packageName == pkg
+            }
+            if (resolved.isEmpty()) {
+                // 无启动入口（或已卸载）→ 移除该包全部条目
+                _apps.value = _apps.value.filterNot { it.packageName == pkg }
+                persist()
+                return@runCatching
+            }
+            val oldByActivity = _apps.value.filter { it.packageName == pkg }.associateBy { it.activityName }
+            val oldByPkg = _apps.value.firstOrNull { it.packageName == pkg } // 旧数据迁移
             val installedAt = runCatching {
                 pm.getPackageInfo(pkg, 0).firstInstallTime
             }.getOrDefault(0L)
-            val old = _apps.value.firstOrNull { it.packageName == pkg }
-            val entry = AppEntry(
-                packageName = pkg,
-                label = label,
-                firstInstallTime = installedAt,
-                launchCount = old?.launchCount ?: 0,
-                lastLaunchAt = old?.lastLaunchAt ?: 0L,
-                index = LabelIndexer.index(label, pinyinSource),
-                packageKeys = LabelIndexer.packageKeys(pkg),
-            )
-            _apps.value = _apps.value.filterNot { it.packageName == pkg } + entry
+            val rebuilt = resolved.map { ri ->
+                val info = ri.activityInfo
+                val label = runCatching { ri.loadLabel(pm).toString() }.getOrDefault(pkg)
+                val old = oldByActivity[info.name] ?: oldByPkg?.takeIf { oldByActivity.isEmpty() }
+                AppEntry(
+                    packageName = pkg,
+                    activityName = info.name,
+                    label = label,
+                    firstInstallTime = installedAt,
+                    launchCount = old?.launchCount ?: 0,
+                    lastLaunchAt = old?.lastLaunchAt ?: 0L,
+                    index = LabelIndexer.index(label, pinyinSource),
+                    packageKeys = LabelIndexer.packageKeys(pkg),
+                )
+            }.distinctBy { it.activityName }
+            _apps.value = _apps.value.filterNot { it.packageName == pkg } + rebuilt
             persist()
         }
     }

@@ -134,8 +134,8 @@ class PanelService : LifecycleService() {
                         iconCache = app.iconCache,
                         canPinShortcut = canPinShortcut(),
                         onLaunch = { entry ->
-                            AppActionHandler.launchApp(this@PanelService, app.appScope, entry) { pkg ->
-                                app.repository.recordLaunch(pkg)
+                            AppActionHandler.launchApp(this@PanelService, app.appScope, entry) { pkg, act ->
+                                app.repository.recordLaunch(pkg, act)
                             }
                             hidePanel()
                         },
