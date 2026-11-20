@@ -27,11 +27,16 @@
         android:supportsRtl="false"
         android:theme="@style/Theme.OpenAppDialer">
 
-        <!-- dock/桌面图标：NoDisplay 跳板（spec F10） -->
+        <!-- dock/桌面图标：NoDisplay 跳板（spec F10）。v3.8：
+             挂 NullWindowAnimations 消除 task-open 转场的白色放大缩小动画；
+             excludeFromRecents + noHistory 防止最近任务残留白色全屏卡片 -->
         <activity
             android:name=".panel.PanelLaunchActivity"
+            android:excludeFromRecents="true"
             android:exported="true"
-            android:theme="@android:style/Theme.NoDisplay">
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.OpenAppDialer.Trampoline">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

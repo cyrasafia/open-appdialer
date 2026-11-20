@@ -1,4 +1,4 @@
-# Open AppDialer 技术规格（Spec v3.7）
+# Open AppDialer 技术规格（Spec v3.8）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -280,6 +280,8 @@ data class AppEntry(
 | Q9 | "新安装"阈值？ | 已定：≤ 2 小时（服务"刚装好-来找"场景），代码常量可调（v1.3） |
 
 ## 10. 变更记录
+
+- 2026-11-20 v3.8 跳板补齐防护（Android 17 实测）：挂 NullWindowAnimations 消除 dock 点击的白色全屏放大缩小转场；excludeFromRecents + noHistory + taskAffinity 修复最近任务残留白色卡片
 
 - 2026-11-16 v3.7 修复同包多启动入口丢失（com.android.contacts 双入口只保留联系人、电话搜不到）：条目身份键升级为 包名+Activity（缓存 schema v5，usage 迁移：同包首个入口继承），启动与固定快捷方式改用精确组件 Intent，使用计数按入口独立
 - 2026-11-15 v3.6 切任务/后台任务管理/息屏时自动收起面板（ACTION_CLOSE_SYSTEM_DIALOGS + ACTION_SCREEN_OFF，零权限）

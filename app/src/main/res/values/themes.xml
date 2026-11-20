@@ -20,6 +20,15 @@
         <item name="android:windowAnimationStyle">@style/NullWindowAnimations</item>
     </style>
 
+    <!-- 跳板主题：NoDisplay + 动画置空（v3.8），消除 task-open 转场白屏动画 -->
+    <style name="Theme.OpenAppDialer.Trampoline">
+        <item name="android:windowAnimationStyle">@style/NullWindowAnimations</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
     <style name="NullWindowAnimations" parent="@android:style/Animation.Activity">
         <item name="android:taskOpenEnterAnimation">@anim/no_anim</item>
         <item name="android:taskOpenExitAnimation">@anim/no_anim</item>

@@ -12,6 +12,14 @@
         <item name="android:windowAnimationStyle">@style/NullWindowAnimations</item>
     </style>
 
+    <style name="Theme.OpenAppDialer.Trampoline">
+        <item name="android:windowAnimationStyle">@style/NullWindowAnimations</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
     <style name="NullWindowAnimations" parent="@android:style/Animation.Activity">
         <item name="android:taskOpenEnterAnimation">@anim/no_anim</item>
         <item name="android:taskOpenExitAnimation">@anim/no_anim</item>
