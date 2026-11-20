@@ -121,8 +121,8 @@ class MainActivity : ComponentActivity() {
                             finish()
                         },
                         onAppAction = { entry, action ->
-                            AppActionHandler.handle(this, app.appScope, entry, action) { pkg ->
-                                app.iconCache.icon(pkg)
+                            AppActionHandler.handle(this, app.appScope, entry, action) { pkg, act ->
+                                app.iconCache.icon(pkg, act)
                             }
                         },
                         onOpenSettings = { showSettings = true },

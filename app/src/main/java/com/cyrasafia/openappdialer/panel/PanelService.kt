@@ -142,7 +142,7 @@ class PanelService : LifecycleService() {
                         onAppAction = { entry, action ->
                             AppActionHandler.handle(
                                 this@PanelService, app.appScope, entry, action,
-                            ) { pkg -> app.iconCache.icon(pkg) }
+                            ) { pkg, act -> app.iconCache.icon(pkg, act) }
                             if (action != com.cyrasafia.openappdialer.ui.search.AppAction.PIN_SHORTCUT) hidePanel()
                         },
                         onOpenSettings = {

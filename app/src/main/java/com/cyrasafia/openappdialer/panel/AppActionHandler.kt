@@ -42,7 +42,7 @@ object AppActionHandler {
         }
     }
 
-    fun handle(context: Context, scope: CoroutineScope, entry: AppEntry, action: AppAction, iconProvider: suspend (String) -> android.graphics.Bitmap?) {
+    fun handle(context: Context, scope: CoroutineScope, entry: AppEntry, action: AppAction, iconProvider: suspend (String, String) -> android.graphics.Bitmap?) {
         when (action) {
             AppAction.PIN_SHORTCUT -> pinShortcut(context, scope, entry, iconProvider)
             AppAction.DETAILS -> {
@@ -79,7 +79,7 @@ object AppActionHandler {
         context: Context,
         scope: CoroutineScope,
         entry: AppEntry,
-        iconProvider: suspend (String) -> android.graphics.Bitmap?,
+        iconProvider: suspend (String, String) -> android.graphics.Bitmap?,
     ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val sm = context.getSystemService(android.content.pm.ShortcutManager::class.java)
@@ -88,7 +88,7 @@ object AppActionHandler {
             return
         }
         scope.launch {
-            val bmp = iconProvider(entry.packageName)
+            val bmp = iconProvider(entry.packageName, entry.activityName)
             // v3.7：优先精确组件，保证多入口包固定到正确入口
             val launch = if (entry.activityName.isNotEmpty()) {
                 Intent(Intent.ACTION_MAIN).apply {

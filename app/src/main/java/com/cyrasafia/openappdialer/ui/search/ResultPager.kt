@@ -130,8 +130,12 @@ private fun ResultItem(
     onAppAction: (AppEntry, AppAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val bitmap by produceState(initialValue = null as android.graphics.Bitmap?, entry.packageName) {
-        value = iconCache.icon(entry.packageName)
+    val bitmap by produceState(
+        initialValue = null as android.graphics.Bitmap?,
+        entry.packageName,
+        entry.activityName,
+    ) {
+        value = iconCache.icon(entry.packageName, entry.activityName)
     }
     val interaction = remember { MutableInteractionSource() }
     var menuExpanded by remember { mutableStateOf(false) }
