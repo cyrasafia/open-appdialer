@@ -35,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import com.cyrasafia.openappdialer.R
 import com.cyrasafia.openappdialer.data.AppEntry
 import com.cyrasafia.openappdialer.data.AppIconCache
@@ -189,10 +190,12 @@ private fun ResultItem(
                 )
             }
 
-            // 长按操作菜单（spec v2.7）：快捷方式 / 详情 / 卸载
+            // 长按操作菜单（spec v2.7）：快捷方式 / 详情 / 卸载。
+            // v3.9：Popup 必须不可聚焦——可聚焦弹层会抢走窗口焦点，触发 v3.6 的失焦收起把面板连带关闭
             DropdownMenu(
                 expanded = menuExpanded,
                 onDismissRequest = { menuExpanded = false },
+                properties = PopupProperties(focusable = false),
             ) {
                 if (canPinShortcut) {
                     DropdownMenuItem(

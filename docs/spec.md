@@ -1,4 +1,4 @@
-# Open AppDialer 技术规格（Spec v3.8）
+# Open AppDialer 技术规格（Spec v3.9）
 
 > 实现以本文为准；与 `scope.md` 冲突时先改文档再改代码。日期：2026-11-14。
 
@@ -280,6 +280,8 @@ data class AppEntry(
 | Q9 | "新安装"阈值？ | 已定：≤ 2 小时（服务"刚装好-来找"场景），代码常量可调（v1.3） |
 
 ## 10. 变更记录
+
+- 2026-11-20 v3.9 修复 overlay 候选长按菜单失效（面板被连带关闭）：DropdownMenu 弹层默认可聚焦、创建时抢窗口焦点触发 v3.6 失焦收起；弹层改不可聚焦 + 失焦收起加 150ms 防抖（吸收瞬时焦点抖动）
 
 - 2026-11-20 v3.8 跳板补齐防护（Android 17 实测）：挂 NullWindowAnimations 消除 dock 点击的白色全屏放大缩小转场；excludeFromRecents + noHistory + taskAffinity 修复最近任务残留白色卡片
 

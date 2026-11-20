@@ -45,6 +45,8 @@ class PanelService : LifecycleService() {
     private val app: OpenAppDialerApp get() = application as OpenAppDialerApp
     private val owner = ServiceLifecycleOwner()
     private var panelView: FrameLayout? = null
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val pendingHide = Runnable { hidePanel() }
 
     /** 切任务/后台任务管理/息屏时自动收起面板（spec v3.6：Home 与最近任务触发系统广播，聊天气泡同款机制） */
     private val systemEventsReceiver = object : BroadcastReceiver() {
@@ -111,11 +113,15 @@ class PanelService : LifecycleService() {
                 return super.dispatchTouchEvent(event)
             }
 
-            // 即时收起（spec v3.6 快速路径）：切应用/回桌面时新窗口抢走焦点，本回调零延迟触发；
-            // Compose DropdownMenu 的弹层不可聚焦，不会误触发；音量条等系统浮层同样不夺焦
+            // 即时收起（spec v3.6 快速路径 + v3.9 防抖）：切应用/回桌面的瞬间触发；
+            // 150ms 防抖吸收弹层/OEM 的瞬时焦点抖动，真离开时仍近乎即时
             override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
                 super.onWindowFocusChanged(hasWindowFocus)
-                if (!hasWindowFocus) this@PanelService.hidePanel()
+                if (!hasWindowFocus) {
+                    this@PanelService.mainHandler.postDelayed(this@PanelService.pendingHide, 150)
+                } else {
+                    this@PanelService.mainHandler.removeCallbacks(this@PanelService.pendingHide)
+                }
             }
         }.apply {
             // ViewTree owners 必须设在窗口根视图上：WindowRecomposer 在 rootView 上查找（本 bug 实测修复）
@@ -167,6 +173,7 @@ class PanelService : LifecycleService() {
     }
 
     fun hidePanel() {
+        mainHandler.removeCallbacks(pendingHide)
         val view = panelView ?: return
         panelView = null
         owner.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
