@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -30,6 +32,9 @@ class AppRepository(
 
     private val _apps = MutableStateFlow<List<AppEntry>>(emptyList())
     val apps: StateFlow<List<AppEntry>> = _apps.asStateFlow()
+
+    /** 变更互斥（v3.10）：MainActivity 与 PanelService 双接收器并发事件防竞态 */
+    private val mutationMutex = Mutex()
 
     @Volatile
     private var initialLoadStarted = false
@@ -60,7 +65,8 @@ class AppRepository(
 
     /** 全量扫描：重建列表，usage（次数/时间）按包名保留 */
     suspend fun fullScan() = withContext(Dispatchers.IO) {
-        runCatching {
+        mutationMutex.withLock {
+            runCatching {
             val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
             val old = _apps.value.associateBy { it.packageName } // 旧 usage 按包名合并（v3.7：同包多入口首个继承）
             val entries = pm.queryIntentActivities(intent, 0)
@@ -97,8 +103,9 @@ class AppRepository(
                 .distinctBy { it.packageName to it.activityName } // v3.7：同包多入口共存
                 .sortedWith(compareBy({ it.label }, { it.activityName }))
                 .toList()
-            _apps.value = entries
-            cache.save(entries)
+                _apps.value = entries
+                cache.save(entries)
+            }
         }
     }
 
@@ -112,21 +119,24 @@ class AppRepository(
     /** 启动记录（spec F1 使用数据；M3 由结果点击接入）。v3.7：按 包名+Activity 条目级计数 */
     fun recordLaunch(pkg: String, activity: String) {
         scope.launch {
-            val now = System.currentTimeMillis()
-            _apps.value = _apps.value.map {
-                if (it.packageName == pkg && it.activityName == activity) {
-                    it.copy(launchCount = it.launchCount + 1, lastLaunchAt = now)
-                } else {
-                    it
+            mutationMutex.withLock {
+                val now = System.currentTimeMillis()
+                _apps.value = _apps.value.map {
+                    if (it.packageName == pkg && it.activityName == activity) {
+                        it.copy(launchCount = it.launchCount + 1, lastLaunchAt = now)
+                    } else {
+                        it
+                    }
                 }
+                persist()
             }
-            persist()
         }
     }
 
     private suspend fun upsert(pkg: String) = withContext(Dispatchers.IO) {
-        runCatching {
-            if (pkg == excludePackage) return@runCatching
+        mutationMutex.withLock {
+            runCatching {
+                if (pkg == excludePackage) return@runCatching
             val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
             val resolved = pm.queryIntentActivities(intent, 0).filter {
                 it.activityInfo?.applicationInfo?.packageName == pkg
@@ -157,14 +167,17 @@ class AppRepository(
                     packageKeys = LabelIndexer.packageKeys(pkg),
                 )
             }.distinctBy { it.activityName }
-            _apps.value = _apps.value.filterNot { it.packageName == pkg } + rebuilt
-            persist()
+                _apps.value = _apps.value.filterNot { it.packageName == pkg } + rebuilt
+                persist()
+            }
         }
     }
 
     private suspend fun remove(pkg: String) = withContext(Dispatchers.IO) {
-        _apps.value = _apps.value.filterNot { it.packageName == pkg }
-        persist()
+        mutationMutex.withLock {
+            _apps.value = _apps.value.filterNot { it.packageName == pkg }
+            persist()
+        }
     }
 
     private suspend fun persist() = withContext(Dispatchers.IO) {

@@ -48,6 +48,11 @@ class PanelService : LifecycleService() {
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val pendingHide = Runnable { hidePanel() }
 
+    /** 包事件（v3.10）：常驻服务期间监听安装/卸载/更新，新装应用即时入库（此前接收器只在 MainActivity 上，overlay 架构下无人监听） */
+    private val packageReceiver = com.cyrasafia.openappdialer.data.PackageEventReceiver { action, pkg ->
+        app.repository.onPackageEvent(action, pkg)
+    }
+
     /** 切任务/后台任务管理/息屏时自动收起面板（spec v3.6：Home 与最近任务触发系统广播，聊天气泡同款机制） */
     private val systemEventsReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -74,6 +79,18 @@ class PanelService : LifecycleService() {
             },
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
+        ContextCompat.registerReceiver(
+            this,
+            packageReceiver,
+            IntentFilter().apply {
+                addDataScheme("package")
+                addAction(Intent.ACTION_PACKAGE_ADDED)
+                addAction(Intent.ACTION_PACKAGE_REMOVED)
+                addAction(Intent.ACTION_PACKAGE_REPLACED)
+                addAction(Intent.ACTION_PACKAGE_CHANGED)
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -89,6 +106,7 @@ class PanelService : LifecycleService() {
     private fun showPanel() {
         if (panelView != null) return
         searchViewModel.resetSession() // 每次唤起均为全新会话（spec v3.2）
+        app.repository.ensureLoaded() // 节流重扫兜底（spec v3.10：覆盖漏掉的包事件）
         val wm = getSystemService(WindowManager::class.java) ?: return
 
         val density = resources.displayMetrics.density
@@ -216,6 +234,7 @@ class PanelService : LifecycleService() {
 
     override fun onDestroy() {
         runCatching { unregisterReceiver(systemEventsReceiver) }
+        runCatching { unregisterReceiver(packageReceiver) }
         hidePanel()
         owner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         super.onDestroy()
